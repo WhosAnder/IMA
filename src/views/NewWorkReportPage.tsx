@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '../components/ui/Button';
 import { MultiSelect } from '../components/ui/MultiSelect';
 import { SignaturePad } from '../components/ui/SignaturePad';
 import { ImageUpload } from '../components/ui/ImageUpload';
+import { WorkReportPreview } from '../components/reports/WorkReportPreview';
 import { formatoTrabajoSchema } from '../config/formatoTrabajoSchema';
 import { ChevronRight, Save } from 'lucide-react';
 
@@ -107,6 +108,31 @@ export const NewWorkReportPage: React.FC = () => {
   const fechaHoraInicio = watch('fechaHoraInicio');
   const inspeccionRealizada = watch('inspeccionRealizada');
 
+  // Watch all values for preview
+  const watchedValues = useWatch({ control });
+
+  // Prepare values for preview component
+  const previewValues = {
+    subsistema: watchedValues.subsistema,
+    ubicacion: watchedValues.ubicacion,
+    fechaHoraInicio: watchedValues.fechaHoraInicio,
+    turno: watchedValues.turno,
+    frecuencia: watchedValues.frecuencia,
+    trabajadores: watchedValues.trabajadores,
+
+    inspeccionRealizada: watchedValues.inspeccionRealizada,
+    observacionesActividad: watchedValues.observacionesActividad,
+    evidenciasCount: watchedValues.evidencias?.length ?? 0,
+
+    herramientas: watchedValues.herramientas,
+    refacciones: watchedValues.refacciones,
+
+    observacionesGenerales: watchedValues.observacionesGenerales,
+    nombreResponsable: watchedValues.nombreResponsable,
+    fechaHoraTermino: watchedValues.fechaHoraTermino,
+    firmaResponsable: watchedValues.firmaResponsable,
+  };
+
   // Auto-calculate shift
   useEffect(() => {
     if (fechaHoraInicio) {
@@ -139,255 +165,266 @@ export const NewWorkReportPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-12">
+    <div className="max-w-[1600px] mx-auto space-y-8 pb-12 px-4 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{formatoTrabajoSchema.name}</h1>
         <p className="text-gray-500">Llena el formato de trabajo para registrar la actividad realizada.</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        
-        {/* Section 1: General Data */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
-            <h2 className="text-lg font-semibold text-gray-800">Datos generales</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subsistema</label>
-              <select 
-                {...register('subsistema')}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.subsistema ? 'border-red-500' : 'border-gray-300'}`}
-              >
-                <option value="">Seleccionar...</option>
-                {mockSubsystems.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              {errors.subsistema && <p className="mt-1 text-sm text-red-600">{errors.subsistema.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
-              <input 
-                type="text" 
-                {...register('ubicacion')}
-                placeholder="Ej. Estación A – Andén 2"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ubicacion ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.ubicacion && <p className="mt-1 text-sm text-red-600">{errors.ubicacion.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de inicio</label>
-              <input 
-                type="datetime-local" 
-                {...register('fechaHoraInicio')}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraInicio ? 'border-red-500' : 'border-gray-300'}`}
-              />
-              {errors.fechaHoraInicio && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraInicio.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-              <input 
-                type="text" 
-                {...register('turno')}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
-              <select 
-                {...register('frecuencia')}
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.frecuencia ? 'border-red-500' : 'border-gray-300'}`}
-              >
-                <option value="">Seleccionar...</option>
-                {mockFrequencies.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-              {errors.frecuencia && <p className="mt-1 text-sm text-red-600">{errors.frecuencia.message}</p>}
-            </div>
-
-            <div className="md:col-span-2">
-              <Controller
-                name="trabajadores"
-                control={control}
-                render={({ field }) => (
-                  <MultiSelect
-                    label="Trabajadores"
-                    options={mockWorkers}
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={errors.trabajadores?.message}
-                  />
-                )}
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Section 2: Activity */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">2</div>
-            <h2 className="text-lg font-semibold text-gray-800">Actividad</h2>
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                id="inspeccionRealizada"
-                {...register('inspeccionRealizada')}
-                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="inspeccionRealizada" className="font-medium text-gray-700">
-                Inspección realizada
-              </label>
-            </div>
-
-            {inspeccionRealizada && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        {/* Left Column: Form */}
+        <div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+            
+            {/* Section 1: General Data */}
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
+                <h2 className="text-lg font-semibold text-gray-800">Datos generales</h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones de la actividad</label>
-                  <textarea
-                    {...register('observacionesActividad')}
-                    rows={4}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.observacionesActividad ? 'border-red-500' : 'border-gray-300'}`}
-                    placeholder="Describa los hallazgos o actividades realizadas..."
-                  />
-                  {errors.observacionesActividad && <p className="mt-1 text-sm text-red-600">{errors.observacionesActividad.message}</p>}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subsistema</label>
+                  <select 
+                    {...register('subsistema')}
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.subsistema ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {mockSubsystems.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {errors.subsistema && <p className="mt-1 text-sm text-red-600">{errors.subsistema.message}</p>}
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                  <input 
+                    type="text" 
+                    {...register('ubicacion')}
+                    placeholder="Ej. Estación A – Andén 2"
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ubicacion ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {errors.ubicacion && <p className="mt-1 text-sm text-red-600">{errors.ubicacion.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de inicio</label>
+                  <input 
+                    type="datetime-local" 
+                    {...register('fechaHoraInicio')}
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraInicio ? 'border-red-500' : 'border-gray-300'}`}
+                  />
+                  {errors.fechaHoraInicio && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraInicio.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
+                  <input 
+                    type="text" 
+                    {...register('turno')}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
+                  <select 
+                    {...register('frecuencia')}
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.frecuencia ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">Seleccionar...</option>
+                    {mockFrequencies.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                  {errors.frecuencia && <p className="mt-1 text-sm text-red-600">{errors.frecuencia.message}</p>}
+                </div>
+
+                <div className="md:col-span-2">
                   <Controller
-                    name="evidencias"
+                    name="trabajadores"
                     control={control}
                     render={({ field }) => (
-                      <ImageUpload
-                        label="Evidencias fotográficas"
+                      <MultiSelect
+                        label="Trabajadores"
+                        options={mockWorkers}
+                        value={field.value}
                         onChange={field.onChange}
-                        error={errors.evidencias?.message as string}
+                        error={errors.trabajadores?.message}
                       />
                     )}
                   />
                 </div>
               </div>
-            )}
-          </div>
-        </section>
+            </section>
 
-        {/* Section 3: Tools and Materials */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">3</div>
-            <h2 className="text-lg font-semibold text-gray-800">Herramientas y refacciones</h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            <Controller
-              name="herramientas"
-              control={control}
-              render={({ field }) => (
-                <MultiSelect
-                  label="Herramientas utilizadas"
-                  options={mockTools}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Seleccionar herramientas..."
-                />
-              )}
-            />
-
-            <Controller
-              name="refacciones"
-              control={control}
-              render={({ field }) => (
-                <MultiSelect
-                  label="Refacciones utilizadas"
-                  options={mockSpareParts}
-                  value={field.value || []}
-                  onChange={field.onChange}
-                  placeholder="Seleccionar refacciones..."
-                />
-              )}
-            />
-          </div>
-        </section>
-
-        {/* Section 4: Closure */}
-        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">4</div>
-            <h2 className="text-lg font-semibold text-gray-800">Cierre</h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
-              <textarea
-                {...register('observacionesGenerales')}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Comentarios finales..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del responsable</label>
-                <input 
-                  type="text" 
-                  {...register('nombreResponsable')}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.nombreResponsable ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.nombreResponsable && <p className="mt-1 text-sm text-red-600">{errors.nombreResponsable.message}</p>}
+            {/* Section 2: Activity */}
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">2</div>
+                <h2 className="text-lg font-semibold text-gray-800">Actividad</h2>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de término</label>
-                <input 
-                  type="datetime-local" 
-                  {...register('fechaHoraTermino')}
-                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraTermino ? 'border-red-500' : 'border-gray-300'}`}
-                />
-                {errors.fechaHoraTermino && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraTermino.message}</p>}
-              </div>
-            </div>
-
-            <div>
-              <Controller
-                name="firmaResponsable"
-                control={control}
-                render={({ field }) => (
-                  <SignaturePad
-                    label="Firma del responsable"
-                    onChange={field.onChange}
-                    error={errors.firmaResponsable?.message}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="inspeccionRealizada"
+                    {...register('inspeccionRealizada')}
+                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                )}
-              />
-            </div>
-          </div>
-        </section>
+                  <label htmlFor="inspeccionRealizada" className="font-medium text-gray-700">
+                    Inspección realizada
+                  </label>
+                </div>
 
-        <div className="flex justify-end pt-4">
-          <Button 
-            type="submit" 
-            className="w-full md:w-auto px-8 py-3 text-lg"
-            isLoading={isSubmitting}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            Generar reporte
-          </Button>
+                {inspeccionRealizada && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones de la actividad</label>
+                      <textarea
+                        {...register('observacionesActividad')}
+                        rows={4}
+                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.observacionesActividad ? 'border-red-500' : 'border-gray-300'}`}
+                        placeholder="Describa los hallazgos o actividades realizadas..."
+                      />
+                      {errors.observacionesActividad && <p className="mt-1 text-sm text-red-600">{errors.observacionesActividad.message}</p>}
+                    </div>
+
+                    <div>
+                      <Controller
+                        name="evidencias"
+                        control={control}
+                        render={({ field }) => (
+                          <ImageUpload
+                            label="Evidencias fotográficas"
+                            onChange={field.onChange}
+                            error={errors.evidencias?.message as string}
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Section 3: Tools and Materials */}
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">3</div>
+                <h2 className="text-lg font-semibold text-gray-800">Herramientas y refacciones</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                <Controller
+                  name="herramientas"
+                  control={control}
+                  render={({ field }) => (
+                    <MultiSelect
+                      label="Herramientas utilizadas"
+                      options={mockTools}
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Seleccionar herramientas..."
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="refacciones"
+                  control={control}
+                  render={({ field }) => (
+                    <MultiSelect
+                      label="Refacciones utilizadas"
+                      options={mockSpareParts}
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Seleccionar refacciones..."
+                    />
+                  )}
+                />
+              </div>
+            </section>
+
+            {/* Section 4: Closure */}
+            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">4</div>
+                <h2 className="text-lg font-semibold text-gray-800">Cierre</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
+                  <textarea
+                    {...register('observacionesGenerales')}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Comentarios finales..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del responsable</label>
+                    <input 
+                      type="text" 
+                      {...register('nombreResponsable')}
+                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.nombreResponsable ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.nombreResponsable && <p className="mt-1 text-sm text-red-600">{errors.nombreResponsable.message}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de término</label>
+                    <input 
+                      type="datetime-local" 
+                      {...register('fechaHoraTermino')}
+                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraTermino ? 'border-red-500' : 'border-gray-300'}`}
+                    />
+                    {errors.fechaHoraTermino && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraTermino.message}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <Controller
+                    name="firmaResponsable"
+                    control={control}
+                    render={({ field }) => (
+                      <SignaturePad
+                        label="Firma del responsable"
+                        onChange={field.onChange}
+                        error={errors.firmaResponsable?.message}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <div className="flex justify-end pt-4">
+              <Button 
+                type="submit" 
+                className="w-full md:w-auto px-8 py-3 text-lg"
+                isLoading={isSubmitting}
+              >
+                <Save className="w-5 h-5 mr-2" />
+                Generar reporte
+              </Button>
+            </div>
+          </form>
         </div>
-      </form>
+
+        {/* Right Column: Preview */}
+        <div>
+          <WorkReportPreview values={previewValues} />
+        </div>
+      </div>
     </div>
   );
 };
+
