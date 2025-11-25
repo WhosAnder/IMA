@@ -62,7 +62,7 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
       {/* 1. Outer page & frame */}
       <div className="relative mx-auto w-full max-w-[750px] aspect-[8.5/11] bg-[#153A7A] p-4 text-xs leading-relaxed shadow-md overflow-hidden">
         <div className="relative h-full w-full rounded-[24px] border-[3px] border-[#F0493B] bg-[#f5f7ff] overflow-hidden flex flex-col">
-          
+
           {/* 2. Watermark - Visible behind content */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-0">
             <span className="select-none text-[90px] font-bold text-gray-400/20 rotate-[-25deg] tracking-wider">
@@ -72,7 +72,7 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
 
           {/* Page content - Transparent wrapper */}
           <div className="relative z-10 h-full w-full flex flex-col bg-transparent">
-            
+
             {/* 3. Header layout */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3">
               <div className="h-10 w-32 flex items-center justify-start">
@@ -160,12 +160,12 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                     <div className="min-h-[70px] rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A]">
                       {herramientas && herramientas.length > 0
                         ? (
-                            <ul className="list-disc pl-4">
-                              {herramientas.map((tool) => (
-                                <li key={tool}>{formatToolName(tool)}</li>
-                              ))}
-                            </ul>
-                          )
+                          <ul className="list-disc pl-4">
+                            {herramientas.map((tool) => (
+                              <li key={tool}>{formatToolName(tool)}</li>
+                            ))}
+                          </ul>
+                        )
                         : "Ninguna"}
                     </div>
                   </div>
@@ -178,12 +178,12 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                     <div className="min-h-[70px] rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A]">
                       {refacciones && refacciones.length > 0
                         ? (
-                            <ul className="list-disc pl-4">
-                              {refacciones.map((item) => (
-                                <li key={item}>{formatPartName(item)}</li>
-                              ))}
-                            </ul>
-                          )
+                          <ul className="list-disc pl-4">
+                            {refacciones.map((item) => (
+                              <li key={item}>{formatPartName(item)}</li>
+                            ))}
+                          </ul>
+                        )
                         : "Ninguna"}
                     </div>
                   </div>

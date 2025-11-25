@@ -12,11 +12,15 @@ import { ChevronRight, Save } from 'lucide-react';
 
 // Mock Data
 const mockSubsystems = [
-  { value: 'aerotren', label: 'Aerotrén' },
-  { value: 'andenes', label: 'Andenes' },
-  { value: 'senalizacion', label: 'Señalización' },
-  { value: 'energia', label: 'Energía' },
-  { value: 'telecom', label: 'Telecomunicaciones' },
+  { value: 'EQUIPO DE GUIA/ TRABAJO DE GUIA', label: 'Equipo de guia/ trabajo de guia' },
+  { value: 'VEHICULO', label: 'Vehiculo' },
+  { value: 'EQUIPO DE PROPULSION', label: 'Equipo de propulsion' },
+  { value: 'EQUIPO DE CONTROL DE TREN (ATC)', label: 'Equipo de control de tren (ATC)' },
+  { value: 'EQUIPO DE COMUNICACION', label: 'Equipo de comunicacion' },
+  { value: 'EQUIPO DE DISTRIBUCION DE POTENCIA DE BAJO VOLTAJE', label: 'Equipo de distribucion de potencia de bajo voltaje' },
+  { value: 'EQUIPO DE CONTROL CENTRAL Y SCADA', label: 'Equipo de control central y SCADA' },
+  { value: 'EQUIPO DE ESTACION', label: 'Equipo de estacion' },
+  { value: 'EQUIPO DE MANTENIMIENTO', label: 'Equipo de mantenimiento' },
 ];
 
 const mockFrequencies = [
@@ -57,14 +61,14 @@ const workReportSchema = z.object({
   turno: z.string(),
   frecuencia: z.string().min(1, "La frecuencia es obligatoria"),
   trabajadores: z.array(z.string()).min(1, "Debe seleccionar al menos un trabajador"),
-  
+
   inspeccionRealizada: z.boolean(),
   observacionesActividad: z.string().optional(),
   evidencias: z.array(z.any()).optional(), // Using any for File objects for now
-  
+
   herramientas: z.array(z.string()).optional(),
   refacciones: z.array(z.string()).optional(),
-  
+
   observacionesGenerales: z.string().optional(),
   nombreResponsable: z.string().min(1, "El nombre del responsable es obligatorio"),
   firmaResponsable: z.string().nullable().refine((val) => val !== null, {
@@ -81,7 +85,7 @@ const workReportSchema = z.object({
   path: ["observacionesActividad"],
 });
 
-type WorkReportFormValues = z.infer<typeof workReportSchema>;
+export type WorkReportFormValues = z.infer<typeof workReportSchema>;
 
 export const NewWorkReportPage: React.FC = () => {
   const {
@@ -139,15 +143,15 @@ export const NewWorkReportPage: React.FC = () => {
       const date = new Date(fechaHoraInicio);
       const hour = date.getHours();
       let shift = 'Nocturno';
-      
+
       if (hour >= 6 && hour < 14) {
         shift = 'Matutino';
       } else if (hour >= 14 && hour < 22) {
         shift = 'Vespertino';
       }
-      
+
       setValue('turno', shift);
-      
+
       // Auto-set end time to start time + 1 hour for convenience
       const endDate = new Date(date.getTime() + 60 * 60 * 1000);
       // Handle timezone offset for datetime-local input
@@ -175,18 +179,18 @@ export const NewWorkReportPage: React.FC = () => {
         {/* Left Column: Form */}
         <div>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            
+
             {/* Section 1: General Data */}
             <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
               <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
                 <h2 className="text-lg font-semibold text-gray-800">Datos generales</h2>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Subsistema</label>
-                  <select 
+                  <select
                     {...register('subsistema')}
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.subsistema ? 'border-red-500' : 'border-gray-300'}`}
                   >
@@ -200,8 +204,8 @@ export const NewWorkReportPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     {...register('ubicacion')}
                     placeholder="Ej. Estación A – Andén 2"
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ubicacion ? 'border-red-500' : 'border-gray-300'}`}
@@ -211,8 +215,8 @@ export const NewWorkReportPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de inicio</label>
-                  <input 
-                    type="datetime-local" 
+                  <input
+                    type="datetime-local"
                     {...register('fechaHoraInicio')}
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraInicio ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -221,8 +225,8 @@ export const NewWorkReportPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     {...register('turno')}
                     readOnly
                     className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500"
@@ -231,7 +235,7 @@ export const NewWorkReportPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
-                  <select 
+                  <select
                     {...register('frecuencia')}
                     className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.frecuencia ? 'border-red-500' : 'border-gray-300'}`}
                   >
@@ -371,8 +375,8 @@ export const NewWorkReportPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del responsable</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       {...register('nombreResponsable')}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.nombreResponsable ? 'border-red-500' : 'border-gray-300'}`}
                     />
@@ -381,8 +385,8 @@ export const NewWorkReportPage: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de término</label>
-                    <input 
-                      type="datetime-local" 
+                    <input
+                      type="datetime-local"
                       {...register('fechaHoraTermino')}
                       className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraTermino ? 'border-red-500' : 'border-gray-300'}`}
                     />
@@ -407,8 +411,8 @@ export const NewWorkReportPage: React.FC = () => {
             </section>
 
             <div className="flex justify-end pt-4">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full md:w-auto px-8 py-3 text-lg"
                 isLoading={isSubmitting}
               >

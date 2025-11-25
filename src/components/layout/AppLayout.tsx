@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useMockCurrentUser } from '@/auth/useMockCurrentUser';
+import { ROLE_LABELS } from '@/auth/roles';
+import { navConfig } from '@/navigation/navConfig';
+import { themes } from '@/theme/colors';
 import {
-    LayoutGrid,
-    FolderOpen,
-    Users,
-    Trash2,
     Menu,
-    ChevronDown,
     Search,
-    Bell
+    Bell,
+    ChevronDown,
+    LogOut
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -15,15 +18,19 @@ interface AppLayoutProps {
     title?: string;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'Mis archivos' }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'IMA Soluciones' }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const user = useMockCurrentUser();
+    const pathname = usePathname();
 
-    const menuItems = [
-        { icon: LayoutGrid, label: 'Inicio', active: false },
-        { icon: FolderOpen, label: 'Mis archivos', active: true },
-        { icon: Users, label: 'Compartidos', active: false },
-        { icon: Trash2, label: 'Papelera', active: false },
-    ];
+    const roleNav = navConfig[user.role];
+
+    // Determine theme color based on role
+    const themeColor = user.role === 'admin'
+        ? themes.admin.primary
+        : user.role === 'almacenista'
+            ? themes.warehouse.primary
+            : themes.work.primary;
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -34,39 +41,47 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'Mis arc
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
             >
-                <div className="h-16 flex items-center px-6 border-b border-gray-100">
-                    <span className="text-xl font-bold text-blue-600">IMA Cloud</span>
+                <div className="h-16 flex flex-col justify-center px-6 border-b border-gray-100">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">IMA Soluciones</span>
+                    <span className="text-lg font-bold" style={{ color: themeColor }}>Plataforma</span>
                 </div>
 
                 <nav className="p-4 space-y-1">
-                    {menuItems.map((item) => (
-                        <button
-                            key={item.label}
-                            className={`
-                w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors
-                ${item.active
-                                    ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
-                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                }
-              `}
-                        >
-                            <item.icon className={`w-5 h-5 mr-3 ${item.active ? 'text-blue-600' : 'text-gray-400'}`} />
-                            {item.label}
-                        </button>
-                    ))}
+                    {roleNav.main.map((item) => {
+                        const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={`
+                                    w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors
+                                    ${isActive
+                                        ? 'bg-gray-100 text-gray-900'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                    }
+                                `}
+                                style={isActive ? { borderLeft: `4px solid ${themeColor}`, backgroundColor: `${themeColor}10`, color: themeColor } : {}}
+                            >
+                                {item.label}
+                            </Link>
+                        );
+                    })}
                 </nav>
 
                 <div className="absolute bottom-0 w-full p-4 border-t border-gray-100">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-blue-700">Almacenamiento</span>
-                            <span className="text-xs text-blue-600">75%</span>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: themeColor }}>
+                            {user.name.charAt(0)}
                         </div>
-                        <div className="w-full bg-blue-200 rounded-full h-1.5">
-                            <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: '75%' }}></div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                            <p className="text-xs text-gray-500 truncate">{ROLE_LABELS[user.role]}</p>
                         </div>
-                        <p className="text-xs text-blue-600 mt-2">7.5 GB de 10 GB usados</p>
                     </div>
+                    <button className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Cerrar sesión
+                    </button>
                 </div>
             </aside>
 
@@ -89,7 +104,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'Mis arc
                         >
                             <Menu className="w-6 h-6" />
                         </button>
-                        <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
+                        <div>
+                            <h1 className="text-xl font-semibold text-gray-800">{title}</h1>
+                            <div className="lg:hidden text-xs text-gray-500" style={{ color: themeColor }}>{ROLE_LABELS[user.role]}</div>
+                        </div>
                     </div>
 
                     <div className="flex items-center space-x-4">
@@ -97,7 +115,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'Mis arc
                             <Search className="w-4 h-4 text-gray-400 mr-2" />
                             <input
                                 type="text"
-                                placeholder="Buscar archivos..."
+                                placeholder="Buscar..."
                                 className="bg-transparent border-none focus:outline-none text-sm text-gray-700 w-full"
                             />
                         </div>
@@ -108,8 +126,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'Mis arc
                         </button>
 
                         <div className="flex items-center pl-4 border-l border-gray-200">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-700 font-bold text-sm mr-2">
-                                YA
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm mr-2" style={{ backgroundColor: themeColor }}>
+                                {user.name.charAt(0)}
                             </div>
                             <ChevronDown className="w-4 h-4 text-gray-400" />
                         </div>
