@@ -1,9 +1,11 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { WarehouseReportPreview } from '@/components/almacen/WarehouseReportPreview';
-import { mockWarehouseReportDetails, mockWarehouseReports } from '@/mock/warehouseReports';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -11,10 +13,23 @@ export function WarehouseReportDetailPage() {
     const params = useParams();
     const id = params?.id as string;
 
-    const reportDetails = mockWarehouseReportDetails[id];
-    const reportMeta = mockWarehouseReports.find(r => r.id === id);
+    const { data: reportDetails, isLoading, error } = useQuery({
+        queryKey: ["warehouseReport", id],
+        queryFn: () => apiGet(`/warehouse-reports/${id}`),
+        enabled: !!id
+    });
 
-    if (!reportDetails || !reportMeta) {
+    if (isLoading) {
+        return (
+            <AppLayout title="Cargando...">
+                <div className="flex items-center justify-center h-[60vh]">
+                    <p className="text-gray-500">Cargando reporte...</p>
+                </div>
+            </AppLayout>
+        );
+    }
+
+    if (error || !reportDetails) {
         return (
             <AppLayout title="Reporte de almacén no encontrado">
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
@@ -32,7 +47,7 @@ export function WarehouseReportDetailPage() {
     }
 
     return (
-        <AppLayout title={`Reporte ${reportMeta.folio}`}>
+        <AppLayout title={`Reporte ${reportDetails.subsistema}`}>
             <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -43,13 +58,11 @@ export function WarehouseReportDetailPage() {
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900">Detalle de Reporte: {reportMeta.folio}</h1>
+                            <h1 className="text-xl font-bold text-gray-900">Detalle de Reporte</h1>
                             <div className="flex gap-4 text-sm text-gray-500 mt-1">
-                                <span>{reportMeta.subsistema}</span>
+                                <span>{reportDetails.subsistema}</span>
                                 <span>•</span>
-                                <span>{reportMeta.fechaEntrega}</span>
-                                <span>•</span>
-                                <span>{reportMeta.responsableAlmacen}</span>
+                                <span>{reportDetails.nombreAlmacenista}</span>
                             </div>
                         </div>
                     </div>
@@ -64,3 +77,4 @@ export function WarehouseReportDetailPage() {
         </AppLayout>
     );
 }
+

@@ -1,9 +1,11 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { WorkReportPreview } from '@/components/reports/WorkReportPreview';
-import { mockWorkReportDetails, mockWorkReports } from '@/mock/workReports';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft } from 'lucide-react';
 
@@ -11,10 +13,23 @@ export function WorkReportDetailPage() {
     const params = useParams();
     const id = params?.id as string;
 
-    const reportDetails = mockWorkReportDetails[id];
-    const reportMeta = mockWorkReports.find(r => r.id === id);
+    const { data: reportDetails, isLoading, error } = useQuery({
+        queryKey: ["workReport", id],
+        queryFn: () => apiGet(`/reports/${id}`),
+        enabled: !!id
+    });
 
-    if (!reportDetails || !reportMeta) {
+    if (isLoading) {
+        return (
+            <AppLayout title="Cargando...">
+                <div className="flex items-center justify-center h-[60vh]">
+                    <p className="text-gray-500">Cargando reporte...</p>
+                </div>
+            </AppLayout>
+        );
+    }
+
+    if (error || !reportDetails) {
         return (
             <AppLayout title="Reporte no encontrado">
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
@@ -32,7 +47,7 @@ export function WorkReportDetailPage() {
     }
 
     return (
-        <AppLayout title={`Reporte ${reportMeta.folio}`}>
+        <AppLayout title={`Reporte ${reportDetails.subsistema}`}>
             <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -43,13 +58,11 @@ export function WorkReportDetailPage() {
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-xl font-bold text-gray-900">Detalle de Reporte: {reportMeta.folio}</h1>
+                            <h1 className="text-xl font-bold text-gray-900">Detalle de Reporte</h1>
                             <div className="flex gap-4 text-sm text-gray-500 mt-1">
-                                <span>{reportMeta.subsistema}</span>
+                                <span>{reportDetails.subsistema}</span>
                                 <span>•</span>
-                                <span>{reportMeta.fecha}</span>
-                                <span>•</span>
-                                <span>{reportMeta.responsable}</span>
+                                <span>{reportDetails.nombreResponsable}</span>
                             </div>
                         </div>
                     </div>
@@ -64,3 +77,4 @@ export function WorkReportDetailPage() {
         </AppLayout>
     );
 }
+
