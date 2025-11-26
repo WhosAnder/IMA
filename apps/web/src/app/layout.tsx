@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "../index.css";
+import { QueryProvider } from "@/query/QueryProvider";
 
 export const metadata: Metadata = {
   title: "IMA Cloud",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body>
-        {children}
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

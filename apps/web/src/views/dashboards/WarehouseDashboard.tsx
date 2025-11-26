@@ -1,13 +1,22 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
-import { mockWarehouseReports } from '@/mock/warehouseReports';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api';
 import { themes } from '@/theme/colors';
 import { Plus, Package, Clock, TrendingUp } from 'lucide-react';
+import type { WarehouseReportListItem } from '@/types/warehouseReportList';
 
 export function WarehouseDashboard() {
     const themeColor = themes.warehouse.primary;
-    const totalWarehouseReports = mockWarehouseReports.length;
-    const recentReports = mockWarehouseReports.slice(0, 5);
+    
+    const { data: warehouseReports = [] } = useQuery<WarehouseReportListItem[]>({
+        queryKey: ["warehouseReports"],
+        queryFn: () => apiGet("/warehouse-reports")
+    });
+
+    const totalWarehouseReports = warehouseReports.length;
+    const recentReports = warehouseReports.slice(0, 5);
 
     return (
         <div className="space-y-6">

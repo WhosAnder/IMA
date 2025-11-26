@@ -1,20 +1,34 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
-import { mockWorkReports } from '@/mock/workReports';
-import { mockWarehouseReports } from '@/mock/warehouseReports';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api';
 import { themes } from '@/theme/colors';
 import { Plus, FileText, Package, TrendingUp } from 'lucide-react';
+import type { WorkReportListItem } from '@/types/workReportList';
+import type { WarehouseReportListItem } from '@/types/warehouseReportList';
 
 export function AdminDashboard() {
     const themeColor = themes.admin.primary;
-    const totalWorkReports = mockWorkReports.length;
-    const totalWarehouseReports = mockWarehouseReports.length;
+    
+    const { data: workReports = [] } = useQuery<WorkReportListItem[]>({
+        queryKey: ["workReports"],
+        queryFn: () => apiGet("/reports")
+    });
+
+    const { data: warehouseReports = [] } = useQuery<WarehouseReportListItem[]>({
+        queryKey: ["warehouseReports"],
+        queryFn: () => apiGet("/warehouse-reports")
+    });
+
+    const totalWorkReports = workReports.length;
+    const totalWarehouseReports = warehouseReports.length;
     const totalReports = totalWorkReports + totalWarehouseReports;
 
     // Merge recent reports from both modules
     const recentActivity = [
-        ...mockWorkReports.slice(0, 3).map(r => ({ ...r, type: 'Trabajo' as const, href: `/reports/${r.id}` })),
-        ...mockWarehouseReports.slice(0, 3).map(r => ({ ...r, type: 'Almacén' as const, href: `/almacen/${r.id}`, fecha: r.fechaEntrega })),
+        ...workReports.slice(0, 3).map(r => ({ ...r, type: 'Trabajo' as const, href: `/reports/${r.id}` })),
+        ...warehouseReports.slice(0, 3).map(r => ({ ...r, type: 'Almacén' as const, href: `/almacen/${r.id}`, fecha: r.fechaEntrega })),
     ].slice(0, 6);
 
     return (

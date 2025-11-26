@@ -1,13 +1,22 @@
+"use client";
 import React from 'react';
 import Link from 'next/link';
-import { mockWorkReports } from '@/mock/workReports';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '@/lib/api';
 import { themes } from '@/theme/colors';
 import { Plus, FileText, Clock, TrendingUp } from 'lucide-react';
+import type { WorkReportListItem } from '@/types/workReportList';
 
 export function SupervisorDashboard() {
     const themeColor = themes.work.primary;
-    const totalWorkReports = mockWorkReports.length;
-    const recentReports = mockWorkReports.slice(0, 5);
+    
+    const { data: workReports = [] } = useQuery<WorkReportListItem[]>({
+        queryKey: ["workReports"],
+        queryFn: () => apiGet("/reports")
+    });
+
+    const totalWorkReports = workReports.length;
+    const recentReports = workReports.slice(0, 5);
 
     return (
         <div className="space-y-6">
