@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../db/client";
 import { users } from "../db/schema";
 import { generateId } from "better-auth";
-import { hashPassword, verifyPassword } from "better-auth/password";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 
 export const auth = new Hono();
 
@@ -49,7 +49,7 @@ auth.post("/login", async (c) => {
 
     if (!found) return c.json({ error: "User not found" }, 404);
 
-    const ok = await verifyPassword(data.password, found.passwordHash);
+    const ok = await verifyPassword(found.passwordHash, data.password);
     if (!ok) return c.json({ error: "Invalid credentials" }, 401);
 
     return c.json({
