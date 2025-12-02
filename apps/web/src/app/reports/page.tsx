@@ -1,7 +1,7 @@
 "use client";
 
-import { ReportsListPage } from "@/views/ReportsListPage";
-import { RequireRole } from "@/auth/RequireRole";
+import { ReportsListPage } from "@/features/reports/views/ReportsListPage";
+import { RequireRole } from "@/features/auth/components/RequireRole";
 
 export default function Page() {
     return (

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "../index.css";
-import { QueryProvider } from "@/query/QueryProvider";
+import { QueryProvider } from "@/shared/query/QueryProvider";
 
 export const metadata: Metadata = {
   title: "IMA Cloud",
