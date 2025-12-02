@@ -1,26 +1,28 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Client } from "pg";
-import * as schema from "./schema";
+import { Pool } from "pg";
 
-const connectionString = process.env.DATABASE_URL;
+const DB_URL = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error("DATABASE_URL no está definida");
+if (!DB_URL) {
+  throw new Error("DATABASE_URL environment variable is required");
 }
 
-const client = new Client({
-  connectionString,
+const pool = new Pool({
+  connectionString: DB_URL,
+  max: 20,
+  min: 2,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
 });
 
-// SIN await, solo lanzamos la promesa
-client
-  .connect()
-  .then(() => {
-    console.log("[auth] DB conectada");
-  })
-  .catch((err) => {
-    console.error("[auth] Error al conectar a la DB:", err);
-    process.exit(1);
-  });
+pool.on("error", (err) => {
+  console.error("[Database] pool error:", err);
+});
 
-export const db = drizzle(client, { schema });
+pool.on("connect", () => {
+  console.log("[Database] pool connected");
+});
+
+const db = drizzle({ client: pool });
+
+export { db };
