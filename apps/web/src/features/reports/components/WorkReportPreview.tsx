@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export type WorkReportPreviewProps = {
   values: {
@@ -43,13 +43,13 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
   } = values;
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleString('es-MX', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleString("es-MX", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -62,7 +62,6 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
       {/* 1. Outer page & frame */}
       <div className="relative mx-auto w-full max-w-[750px] aspect-[8.5/11] bg-[#153A7A] p-4 text-xs leading-relaxed shadow-md overflow-hidden">
         <div className="relative h-full w-full rounded-[24px] border-[3px] border-[#F0493B] bg-[#f5f7ff] overflow-hidden flex flex-col">
-
           {/* 2. Watermark - Visible behind content */}
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-0">
             <span className="select-none text-[90px] font-bold text-gray-400/20 rotate-[-25deg] tracking-wider">
@@ -72,7 +71,6 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
 
           {/* Page content - Transparent wrapper */}
           <div className="relative z-10 h-full w-full flex flex-col bg-transparent">
-
             {/* 3. Header layout */}
             <div className="flex items-center justify-between px-6 pt-5 pb-3">
               <div className="h-10 w-32 flex items-center justify-start">
@@ -81,8 +79,10 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                   alt="Logo IMA"
                   className="h-10 w-auto object-contain"
                   onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextElementSibling?.classList.remove(
+                      "hidden",
+                    );
                   }}
                 />
                 <div className="hidden h-10 w-28 bg-[#153A7A] text-white text-xs font-semibold rounded-md flex items-center justify-center">
@@ -91,7 +91,9 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
               </div>
               <div className="text-right text-[11px] leading-tight text-[#153A7A]">
                 <div className="font-semibold">Formato de trabajo proyecto</div>
-                <div className="uppercase text-[10px] tracking-wide">AEROTREN AICM</div>
+                <div className="uppercase text-[10px] tracking-wide">
+                  AEROTREN AICM
+                </div>
               </div>
             </div>
             <div className="mx-6 h-[2px] rounded-full bg-[#153A7A]" />
@@ -101,7 +103,10 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
               <div className="mt-4 space-y-2 px-6">
                 <div className="grid grid-cols-2 gap-4">
                   <LabeledPill label="SUBSISTEMA" value={subsistema} />
-                  <LabeledPill label="FECHA Y HORA" value={formatDate(fechaHoraInicio)} />
+                  <LabeledPill
+                    label="FECHA Y HORA"
+                    value={formatDate(fechaHoraInicio)}
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <LabeledPill label="UBICACIÓN" value={ubicacion} />
@@ -127,7 +132,9 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                 </div>
                 <div className="rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold">¿Inspección realizada?</span>
+                    <span className="font-semibold">
+                      ¿Inspección realizada?
+                    </span>
                     <span className="font-semibold">
                       {inspeccionRealizada ? "SÍ" : "NO"}
                     </span>
@@ -137,7 +144,8 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                       OBSERVACIONES
                     </div>
                     <div className="min-h-[40px] rounded border border-[#d0d5ee] bg-white px-2 py-1 whitespace-pre-wrap">
-                      {observacionesActividad && observacionesActividad.trim().length > 0
+                      {observacionesActividad &&
+                      observacionesActividad.trim().length > 0
                         ? observacionesActividad
                         : "—"}
                     </div>
@@ -158,15 +166,15 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                       HERRAMIENTAS UTILIZADAS
                     </div>
                     <div className="min-h-[70px] rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A]">
-                      {herramientas && herramientas.length > 0
-                        ? (
-                          <ul className="list-disc pl-4">
-                            {herramientas.map((tool) => (
-                              <li key={tool}>{formatToolName(tool)}</li>
-                            ))}
-                          </ul>
-                        )
-                        : "Ninguna"}
+                      {herramientas && herramientas.length > 0 ? (
+                        <ul className="list-disc pl-4">
+                          {herramientas.map((tool) => (
+                            <li key={tool}>{formatToolName(tool)}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        "Ninguna"
+                      )}
                     </div>
                   </div>
 
@@ -176,15 +184,15 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                       REFACCIONES UTILIZADAS
                     </div>
                     <div className="min-h-[70px] rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A]">
-                      {refacciones && refacciones.length > 0
-                        ? (
-                          <ul className="list-disc pl-4">
-                            {refacciones.map((item) => (
-                              <li key={item}>{formatPartName(item)}</li>
-                            ))}
-                          </ul>
-                        )
-                        : "Ninguna"}
+                      {refacciones && refacciones.length > 0 ? (
+                        <ul className="list-disc pl-4">
+                          {refacciones.map((item) => (
+                            <li key={item}>{formatPartName(item)}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        "Ninguna"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -196,7 +204,8 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                   OBSERVACIONES GENERALES
                 </div>
                 <div className="min-h-[80px] rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A] whitespace-pre-wrap">
-                  {observacionesGenerales && observacionesGenerales.trim().length > 0
+                  {observacionesGenerales &&
+                  observacionesGenerales.trim().length > 0
                     ? observacionesGenerales
                     : "—"}
                 </div>
@@ -211,7 +220,9 @@ export function WorkReportPreview({ values }: WorkReportPreviewProps) {
                       NOMBRE Y FIRMA DE SUPERVISOR
                     </div>
                     <div className="rounded-b-md border border-[#153A7A] bg-white px-3 py-2 text-[10px] text-[#153A7A] flex flex-col justify-between min-h-[60px]">
-                      <div className="font-medium">{nombreResponsable || "—"}</div>
+                      <div className="font-medium">
+                        {nombreResponsable || "—"}
+                      </div>
                       <div className="mt-2 h-[24px] border-t border-dashed border-[#999] flex items-end justify-center">
                         {/* optional tiny signature preview */}
                         {firmaResponsable && (
@@ -259,14 +270,15 @@ function LabeledPill({ label, value }: { label: string; value?: string }) {
 
 // Helpers for formatting mock values
 function workersToString(workers: string[]) {
-  return workers.map(w => w.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())).join(', ');
+  return workers
+    .map((w) => w.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()))
+    .join(", ");
 }
 
 function formatToolName(tool: string) {
-  return tool.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  return tool.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 function formatPartName(part: string) {
-  return part.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  return part.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 }
-

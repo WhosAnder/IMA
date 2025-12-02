@@ -1,4 +1,5 @@
 import { pgTable, text, boolean, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { nanoid } from "nanoid";
 
 export const users = pgTable(
   "users",
@@ -26,7 +27,7 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
-  token: text("token").notNull().unique(),
+  token: text("token").notNull().unique().$defaultFn(() => nanoid()),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   impersonatedBy: text("impersonated_by"),

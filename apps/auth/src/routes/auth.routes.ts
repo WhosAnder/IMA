@@ -3,4 +3,8 @@ import { auth } from "../lib/auth";
 
 export const authRoute = new Hono();
 
-authRoute.post("/*", (c) => auth.handler(c.req.raw));
+// Handle all HTTP methods for Better Auth routes
+authRoute.all("/*", async (c) => {
+  const response = await auth.handler(c.req.raw);
+  return response;
+});

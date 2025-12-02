@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Camera, X, Image as ImageIcon } from 'lucide-react';
-import { Button } from './Button';
+import React, { useState } from "react";
+import { Camera, X, Image as ImageIcon } from "lucide-react";
+import { Button } from "./Button";
 
 interface ImageUploadProps {
   onChange: (files: File[]) => void;
@@ -9,11 +9,11 @@ interface ImageUploadProps {
   maxFiles?: number;
 }
 
-export const ImageUpload: React.FC<ImageUploadProps> = ({ 
-  onChange, 
-  label, 
+export const ImageUpload: React.FC<ImageUploadProps> = ({
+  onChange,
+  label,
   error,
-  maxFiles = 5 
+  maxFiles = 5,
 }) => {
   const [previews, setPreviews] = useState<string[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -22,24 +22,24 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       const totalFiles = [...files, ...newFiles].slice(0, maxFiles);
-      
+
       setFiles(totalFiles);
       onChange(totalFiles);
 
       // Create previews
-      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-      setPreviews(prev => [...prev, ...newPreviews].slice(0, maxFiles));
+      const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
+      setPreviews((prev) => [...prev, ...newPreviews].slice(0, maxFiles));
     }
   };
 
   const removeImage = (index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
     const newPreviews = previews.filter((_, i) => i !== index);
-    
+
     setFiles(newFiles);
     setPreviews(newPreviews);
     onChange(newFiles);
-    
+
     // Revoke object URL to avoid memory leaks
     URL.revokeObjectURL(previews[index]);
   };
@@ -51,7 +51,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           {label}
         </label>
       )}
-      
+
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <input
@@ -68,7 +68,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             htmlFor="evidence-upload"
             className={`
               flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer
-              ${files.length >= maxFiles ? 'opacity-50 cursor-not-allowed' : ''}
+              ${files.length >= maxFiles ? "opacity-50 cursor-not-allowed" : ""}
             `}
           >
             <Camera className="w-4 h-4 mr-2" />
@@ -82,7 +82,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         {previews.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {previews.map((preview, index) => (
-              <div key={index} className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+              <div
+                key={index}
+                className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden border border-gray-200"
+              >
                 <img
                   src={preview}
                   alt={`Evidencia ${index + 1}`}
@@ -99,7 +102,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             ))}
           </div>
         )}
-        
+
         {previews.length === 0 && (
           <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center text-gray-400">
             <ImageIcon className="w-8 h-8 mb-2" />
@@ -107,9 +110,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
         )}
       </div>
-      
+
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 };
-

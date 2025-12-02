@@ -3,16 +3,21 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { router } from "./router";
 import { logger } from "hono/logger";
+import { cors } from "hono/cors";
 
 const app = new Hono();
 
 const port: number = Number(process.env.PORT || 5001);
 
+// Middleware - must be applied before routes
+app.use(logger());
+app.use("*", cors({ 
+  origin: 'http://localhost:3000',
+  credentials: true,
+}));
+
 // Routes
 app.route("/", router);
-
-// Middleware
-app.use(logger());
 
 serve({
   fetch: app.fetch,

@@ -1,20 +1,19 @@
 export type WorkReport = {
-    id: string;
-    folio: string;
-    subsistema: string;
-    ubicacion: string;
-    fechaHoraInicio: string;
-    turno: string;
-    frecuencia: string;
-    trabajadores: string[];
-    inspeccionRealizada: boolean;
-    observacionesActividad?: string;
-    evidencias?: string[];
-    herramientas?: string[];
-    refacciones?: string[];
-    observacionesGenerales?: string;
-    nombreResponsable: string;
-    fechaHoraTermino: string;
-    firmaResponsable?: string | null;
+  id: string;
+  folio: string;
+  subsistema: string;
+  ubicacion: string;
+  fechaHoraInicio: string;
+  turno: string;
+  frecuencia: string;
+  trabajadores: string[];
+  inspeccionRealizada: boolean;
+  observacionesActividad?: string;
+  evidencias?: string[];
+  herramientas?: string[];
+  refacciones?: string[];
+  observacionesGenerales?: string;
+  nombreResponsable: string;
+  fechaHoraTermino: string;
+  firmaResponsable?: string | null;
 };
-

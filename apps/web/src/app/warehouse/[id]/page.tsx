@@ -4,9 +4,9 @@ import { WarehouseReportDetailPage } from "@/features/warehouse/views/WarehouseR
 import { RequireRole } from "@/features/auth/components/RequireRole";
 
 export default function Page() {
-    return (
-        <RequireRole allowedRoles={["admin", "warehouse-manager"]}>
-            <WarehouseReportDetailPage />
-        </RequireRole>
-    );
+  return (
+    <RequireRole allowedRoles={["admin", "warehouse-manager"]}>
+      <WarehouseReportDetailPage />
+    </RequireRole>
+  );
 }

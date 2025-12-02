@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, ChevronDown, Search } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import React, { useState, useRef, useEffect } from "react";
+import { X, Check, ChevronDown, Search } from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -29,7 +29,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
   placeholder = "Seleccionar...",
   label,
   error,
-  className
+  className,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,22 +37,25 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleSelect = (optionValue: string) => {
     if (value.includes(optionValue)) {
-      onChange(value.filter(v => v !== optionValue));
+      onChange(value.filter((v) => v !== optionValue));
     } else {
       onChange([...value, optionValue]);
     }
@@ -60,7 +63,7 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
 
   const removeValue = (optionValue: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(value.filter(v => v !== optionValue));
+    onChange(value.filter((v) => v !== optionValue));
   };
 
   return (
@@ -70,25 +73,27 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           {label}
         </label>
       )}
-      
+
       <div className="relative">
         <div
           className={cn(
             "min-h-[42px] w-full px-3 py-2 border rounded-md shadow-sm bg-white cursor-pointer flex flex-wrap gap-2 items-center",
-            error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500",
-            "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+            error
+              ? "border-red-500 focus:ring-red-500"
+              : "border-gray-300 focus:ring-blue-500",
+            "focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500",
           )}
           onClick={() => setIsOpen(!isOpen)}
         >
           {value.length === 0 && (
             <span className="text-gray-500 text-sm">{placeholder}</span>
           )}
-          
-          {value.map(val => {
-            const option = options.find(o => o.value === val);
+
+          {value.map((val) => {
+            const option = options.find((o) => o.value === val);
             return (
-              <span 
-                key={val} 
+              <span
+                key={val}
                 className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
               >
                 {option?.label || val}
@@ -102,9 +107,9 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
               </span>
             );
           })}
-          
+
           <div className="flex-grow flex justify-end ml-auto">
-             <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-gray-400" />
           </div>
         </div>
 
@@ -123,24 +128,28 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="py-1">
               {filteredOptions.length === 0 ? (
-                <div className="px-4 py-2 text-sm text-gray-500">No se encontraron resultados</div>
+                <div className="px-4 py-2 text-sm text-gray-500">
+                  No se encontraron resultados
+                </div>
               ) : (
-                filteredOptions.map(option => {
+                filteredOptions.map((option) => {
                   const isSelected = value.includes(option.value);
                   return (
                     <div
                       key={option.value}
                       className={cn(
                         "px-4 py-2 text-sm cursor-pointer flex items-center justify-between hover:bg-gray-50",
-                        isSelected && "bg-blue-50 text-blue-700"
+                        isSelected && "bg-blue-50 text-blue-700",
                       )}
                       onClick={() => handleSelect(option.value)}
                     >
                       <span>{option.label}</span>
-                      {isSelected && <Check className="w-4 h-4 text-blue-600" />}
+                      {isSelected && (
+                        <Check className="w-4 h-4 text-blue-600" />
+                      )}
                     </div>
                   );
                 })
@@ -149,9 +158,8 @@ export const MultiSelect: React.FC<MultiSelectProps> = ({
           </div>
         )}
       </div>
-      
+
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 };
-
