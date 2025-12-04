@@ -1,7 +1,7 @@
 "use client";
 
-import { WarehouseReportsListPage } from "@/views/WarehouseReportsListPage";
-import { RequireRole } from "@/auth/RequireRole";
+import { WarehouseReportsListPage } from "@/features/almacen/views/WarehouseReportsListPage";
+import { RequireRole } from "@/features/auth/components/RequireRole";
 
 export default function Page() {
     return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { AppLayout } from "../../../components/layout/AppLayout";
-import { NewWorkReportPage } from "../../../views/NewWorkReportPage";
+import { AppLayout } from "@/shared/layout/AppLayout";
+import { NewWorkReportPage } from "@/features/reports/views/NewWorkReportPage";
 
 export default function NewReportPage() {
   return (

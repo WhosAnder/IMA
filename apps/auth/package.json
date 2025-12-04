@@ -13,17 +13,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
-    "better-auth": "^0.4.0",
+    "better-auth": "^1.4.4",
     "dotenv": "^16.0.0",
-    "drizzle-orm": "^0.30.10",
+    "drizzle-orm": "^0.44.7",
     "hono": "^4.0.0",
-    "pg": "^8.11.0",
+    "pg": "^8.16.3",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/pg": "^8.10.0",
-    "drizzle-kit": "^0.20.18",
+    "drizzle-kit": "^0.31.7",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   }

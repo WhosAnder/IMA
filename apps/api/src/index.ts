@@ -5,7 +5,11 @@ import { reportsRoute } from './routes/reports';
 import { warehouseReportsRouter } from './routes/warehouseReports';
 import { templatesRoute } from './routes/templates';
 
+import { logger } from 'hono/logger';
+
 const app = new Hono();
+
+app.use('*', logger());
 
 // Enable CORS for the web app
 app.use('/*', cors({

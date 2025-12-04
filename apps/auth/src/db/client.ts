@@ -1,24 +1,29 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error("DATABASE_URL no está definida");
+const DB_URL = process.env.DATABASE_URL;
+
+if (!DB_URL) {
+  throw new Error("DATABASE_URL environment variable is required");
 }
 
 const pool = new Pool({
-  connectionString,
-  ssl: {
-    rejectUnauthorized: false
-  },
+  connectionString: DB_URL,
+  max: 20,
+  min: 2,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
 });
 
-// Pool connects automatically when a query is made
-pool.on('error', (err) => {
-  console.error('[auth] Unexpected error on idle client', err);
-  process.exit(-1);
+pool.on("error", (err) => {
+  console.error("[Database] pool error:", err);
 });
 
-export const db = drizzle(pool, { schema });
+pool.on("connect", () => {
+  console.log("[Database] pool connected");
+});
+
+const db = drizzle({ client: pool });
+
+export { db };
