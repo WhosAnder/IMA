@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTemplateForReport } from '../hooks/useTemplates';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -60,6 +61,7 @@ const workReportSchema = z.object({
   fechaHoraInicio: z.string().min(1, "La fecha y hora de inicio son obligatorias"),
   turno: z.string(),
   frecuencia: z.string().min(1, "La frecuencia es obligatoria"),
+  tipoMantenimiento: z.string().min(1, "El tipo de mantenimiento es obligatorio"),
   trabajadores: z.array(z.string()).min(1, "Debe seleccionar al menos un trabajador"),
 
   inspeccionRealizada: z.boolean(),
@@ -100,6 +102,7 @@ export const NewWorkReportPage: React.FC = () => {
     defaultValues: {
       fechaHoraInicio: new Date().toISOString().slice(0, 16),
       turno: '',
+      tipoMantenimiento: '',
       trabajadores: [],
       inspeccionRealizada: false,
       herramientas: [],
@@ -161,8 +164,38 @@ export const NewWorkReportPage: React.FC = () => {
     }
   }, [fechaHoraInicio, setValue]);
 
+  // Auto-set start time on mount
+  useEffect(() => {
+    const currentStart = watch('fechaHoraInicio');
+    if (!currentStart) {
+      setValue('fechaHoraInicio', new Date().toISOString().slice(0, 16));
+    }
+  }, []);
+
+  // Template Selection
+  const subsistema = watch('subsistema');
+  const tipoMantenimiento = watch('tipoMantenimiento');
+  const frecuencia = watch('frecuencia');
+
+  const { data: template } = useTemplateForReport({
+    tipoReporte: 'work',
+    subsistema,
+    tipoMantenimiento,
+    frecuencia
+  });
+
   const onSubmit = async (data: WorkReportFormValues) => {
-    console.log('Form Data Submitted:', data);
+    // Auto-set end time
+    const now = new Date().toISOString().slice(0, 16);
+    data.fechaHoraTermino = now;
+    
+    // Include templateId if available
+    const payload = {
+      ...data,
+      templateId: template?._id
+    };
+
+    console.log('Form Data Submitted:', payload);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     alert('Reporte generado exitosamente (ver consola para datos)');
@@ -245,6 +278,20 @@ export const NewWorkReportPage: React.FC = () => {
                     ))}
                   </select>
                   {errors.frecuencia && <p className="mt-1 text-sm text-red-600">{errors.frecuencia.message}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Mantenimiento</label>
+                  <select
+                    {...register('tipoMantenimiento')}
+                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.tipoMantenimiento ? 'border-red-500' : 'border-gray-300'}`}
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Preventivo A">Preventivo A</option>
+                    <option value="Correctivo">Correctivo</option>
+                    <option value="Inspección visual">Inspección visual</option>
+                  </select>
+                  {errors.tipoMantenimiento && <p className="mt-1 text-sm text-red-600">{errors.tipoMantenimiento.message}</p>}
                 </div>
 
                 <div className="md:col-span-2">
