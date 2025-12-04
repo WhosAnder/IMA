@@ -1,23 +1,19 @@
 "use client";
 import React from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { WarehouseReportPreview } from '@/components/almacen/WarehouseReportPreview';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft } from 'lucide-react';
+import { WarehouseReportPreview } from '@/components/almacen/WarehouseReportPreview';
+import { useWarehouseReportQuery } from '@/hooks/useWarehouseReports';
+import { AppLayout } from '@/components/layout/AppLayout';
 
-export function WarehouseReportDetailPage() {
+export const WarehouseReportDetailPage: React.FC = () => {
     const params = useParams();
+    const router = useRouter();
     const id = params?.id as string;
 
-    const { data: reportDetails, isLoading, error } = useQuery({
-        queryKey: ["warehouseReport", id],
-        queryFn: () => apiGet(`/warehouse-reports/${id}`),
-        enabled: !!id
-    });
+    const { data: report, isLoading, error } = useWarehouseReportQuery(id || '');
 
     if (isLoading) {
         return (
@@ -29,40 +25,36 @@ export function WarehouseReportDetailPage() {
         );
     }
 
-    if (error || !reportDetails) {
+    if (error || !report) {
         return (
             <AppLayout title="Reporte de almacén no encontrado">
                 <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-                    <h1 className="text-2xl font-bold text-gray-800">Reporte de almacén no encontrado</h1>
+                    <h1 className="text-2xl font-bold text-gray-800">Reporte no encontrado</h1>
                     <p className="text-gray-500">El reporte que buscas no existe o no está disponible.</p>
-                    <Link href="/almacen">
-                        <Button variant="secondary">
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Volver a la lista
-                        </Button>
-                    </Link>
+                    <Button variant="secondary" onClick={() => router.push('/almacen')}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Volver a la lista
+                    </Button>
                 </div>
             </AppLayout>
         );
     }
 
     return (
-        <AppLayout title={`Reporte ${reportDetails.subsistema}`}>
+        <AppLayout title={`Reporte ${report.subsistema}`}>
             <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/almacen">
-                            <Button variant="ghost">
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Volver
-                            </Button>
-                        </Link>
+                        <Button variant="ghost" onClick={() => router.push('/almacen')}>
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Volver
+                        </Button>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">Detalle de Reporte</h1>
                             <div className="flex gap-4 text-sm text-gray-500 mt-1">
-                                <span>{reportDetails.subsistema}</span>
+                                <span>{report.subsistema}</span>
                                 <span>•</span>
-                                <span>{reportDetails.nombreAlmacenista}</span>
+                                <span>{report.nombreAlmacenista}</span>
                             </div>
                         </div>
                     </div>
@@ -70,11 +62,11 @@ export function WarehouseReportDetailPage() {
 
                 <div className="bg-gray-100 p-8 rounded-xl border border-gray-200 shadow-inner overflow-auto">
                     <div className="mx-auto" style={{ width: '816px' }}> {/* Letter width */}
-                        <WarehouseReportPreview values={reportDetails} />
+                        <WarehouseReportPreview values={report} />
                     </div>
                 </div>
             </div>
         </AppLayout>
     );
-}
+};
 

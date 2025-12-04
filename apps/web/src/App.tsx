@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useAuth } from './auth/AuthContext'
 import { LoginPage } from './views/LoginPage'
 import { DashboardPage } from './views/DashboardPage'
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user } = useAuth();
 
-  if (!isAuthenticated) {
-    return <LoginPage onLogin={() => setIsAuthenticated(true)} />;
+  if (!user) {
+    return <LoginPage />;
   }
 
   return <DashboardPage />;

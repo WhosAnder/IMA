@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Client } from "pg";
+import { Pool } from "pg";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -8,19 +8,17 @@ if (!connectionString) {
   throw new Error("DATABASE_URL no está definida");
 }
 
-const client = new Client({
+const pool = new Pool({
   connectionString,
+  ssl: {
+    rejectUnauthorized: false
+  },
 });
 
-// SIN await, solo lanzamos la promesa
-client
-  .connect()
-  .then(() => {
-    console.log("[auth] DB conectada");
-  })
-  .catch((err) => {
-    console.error("[auth] Error al conectar a la DB:", err);
-    process.exit(1);
-  });
+// Pool connects automatically when a query is made
+pool.on('error', (err) => {
+  console.error('[auth] Unexpected error on idle client', err);
+  process.exit(-1);
+});
 
-export const db = drizzle(client, { schema });
+export const db = drizzle(pool, { schema });

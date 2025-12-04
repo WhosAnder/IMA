@@ -1,9 +1,16 @@
 import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { auth } from "./routes/auth";
 
 const app = new Hono();
+
+// Enable CORS for the web app
+app.use('/*', cors({
+  origin: ['http://localhost:3000'],
+  credentials: true,
+}));
 
 app.get("/health", (c) => c.json({ ok: true, service: "auth" }));
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useMockCurrentUser } from '@/auth/useMockCurrentUser';
+import { useAuth } from '@/auth/AuthContext';
 import { ROLE_LABELS } from '@/auth/roles';
 import { navConfig } from '@/navigation/navConfig';
 import { themes } from '@/theme/colors';
@@ -21,7 +22,14 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'IMA Soluciones' }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const user = useMockCurrentUser();
+    const { logout } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
+
+    const handleLogout = () => {
+        logout();
+        router.push('/');
+    };
 
     const roleNav = navConfig[user.role];
 
@@ -78,7 +86,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title = 'IMA Sol
                             <p className="text-xs text-gray-500 truncate">{ROLE_LABELS[user.role]}</p>
                         </div>
                     </div>
-                    <button className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
                         <LogOut className="w-4 h-4 mr-2" />
                         Cerrar sesión
                     </button>

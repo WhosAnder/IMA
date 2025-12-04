@@ -86,3 +86,11 @@ export const warehouseReportDetails: Record<string, WarehouseReportDetail> = {
     firmaQuienEntrega: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
   },
 };
+export const getWarehouseReportById = (id: string): (WarehouseReportListItem & WarehouseReportDetail) | undefined => {
+  const summary = warehouseReports.find((r) => r.id === id);
+  const detail = warehouseReportDetails[id];
+
+  if (!summary || !detail) return undefined;
+
+  return { ...summary, ...detail };
+};

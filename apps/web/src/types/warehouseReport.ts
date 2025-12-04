@@ -11,7 +11,7 @@ export type WarehouseItem = {
 
 export type WarehouseReport = {
     subsistema: string;
-    fechaHoraEntrega: Date;
+    fechaHoraEntrega: string;
     turno: string;
 
     nombreQuienRecibe: string;
@@ -22,7 +22,7 @@ export type WarehouseReport = {
 
     observacionesGenerales: string;
 
-    fechaHoraRecepcion: Date;
+    fechaHoraRecepcion: string;
     nombreQuienEntrega: string;
     nombreAlmacenistaCierre: string; // can be same as nombreAlmacenista for now
 

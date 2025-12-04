@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import type { CurrentUser, UserRole } from "./roles";
+import { useAuth } from "./AuthContext";
 
 const DEFAULT_ROLE: UserRole = "admin";
 
 export function useMockCurrentUser(): CurrentUser {
+    const { user } = useAuth();
     const [role, setRole] = useState<UserRole>(DEFAULT_ROLE);
 
     useEffect(() => {
@@ -16,6 +18,15 @@ export function useMockCurrentUser(): CurrentUser {
             setRole(roleParam);
         }
     }, []);
+
+    if (user) {
+        return {
+            id: user.id,
+            name: user.email.split("@")[0], // Simple name derivation
+            role: user.role as UserRole,
+            area: user.role === "supervisor" ? "Vía de la guía" : undefined,
+        };
+    }
 
     return {
         id: "mock-user-1",
