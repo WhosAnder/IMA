@@ -1,8 +1,8 @@
 "use client";
 
 import React from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { NewWarehouseReportPage } from '@/views/NewWarehouseReportPage';
+import { AppLayout } from '@/shared/layout/AppLayout';
+import { NewWarehouseReportPage } from '@/features/almacen/views/NewWarehouseReportPage';
 
 export default function Page() {
     return (
