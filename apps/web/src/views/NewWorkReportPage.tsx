@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTemplateForReport } from '../hooks/useTemplates';
+import { useCreateWorkReportMutation } from '../hooks/useWorkReports';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -98,7 +100,7 @@ export const NewWorkReportPage: React.FC = () => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<WorkReportFormValues>({
-    resolver: zodResolver(workReportSchema),
+    resolver: zodResolver(workReportSchema) as any,
     defaultValues: {
       fechaHoraInicio: new Date().toISOString().slice(0, 16),
       turno: '',
@@ -184,21 +186,49 @@ export const NewWorkReportPage: React.FC = () => {
     frecuencia
   });
 
+  // Mutation
+  const createReportMutation = useCreateWorkReportMutation();
+  const router = useRouter();
+
   const onSubmit = async (data: WorkReportFormValues) => {
     // Auto-set end time
     const now = new Date().toISOString().slice(0, 16);
     data.fechaHoraTermino = now;
     
+    // Convert evidences (File objects) to base64 or handle upload
+    // For now, we'll just map them to their names or skip if they are Files, 
+    // but ideally we should upload them first or convert to base64.
+    // Let's convert to base64 for simplicity in this demo.
+    const evidencesBase64 = await Promise.all(
+      (data.evidences || []).map(async (file: any) => {
+        if (file instanceof File) {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+        }
+        return file;
+      })
+    );
+
     // Include templateId if available
     const payload = {
       ...data,
+      evidencias: evidencesBase64,
       templateId: template?._id
     };
 
     console.log('Form Data Submitted:', payload);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert('Reporte generado exitosamente (ver consola para datos)');
+    
+    try {
+      const result = await createReportMutation.mutateAsync(payload);
+      alert('Reporte generado exitosamente');
+      router.push(`/reports/${(result as any)._id}`);
+    } catch (error) {
+      console.error("Error creating report:", error);
+      alert('Error al generar el reporte');
+    }
   };
 
   return (

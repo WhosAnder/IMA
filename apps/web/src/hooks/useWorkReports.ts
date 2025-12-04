@@ -15,3 +15,16 @@ export function useWorkReportQuery(id: string) {
     enabled: Boolean(id),
   });
 }
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createWorkReport } from "../api/reportsClient";
+
+export function useCreateWorkReportMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createWorkReport,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workReports"] });
+    },
+  });
+}

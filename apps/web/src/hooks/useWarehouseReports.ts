@@ -15,3 +15,16 @@ export function useWarehouseReportQuery(id: string) {
     enabled: Boolean(id),
   });
 }
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createWarehouseReport } from "../api/reportsClient";
+
+export function useCreateWarehouseReportMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createWarehouseReport,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["warehouseReports"] });
+    },
+  });
+}

@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTemplateForReport } from '../hooks/useTemplates';
+import { useCreateWarehouseReportMutation } from '../hooks/useWarehouseReports';
 import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
@@ -102,20 +104,53 @@ export const NewWarehouseReportPage: React.FC = () => {
         frecuencia
     });
 
+    // Mutation
+    const createReportMutation = useCreateWarehouseReportMutation();
+    const router = useRouter();
+
     const onSubmit = async (data: WarehouseReportFormValues) => {
         // Auto-set end time (fechaHoraRecepcion)
         const now = new Date().toISOString().slice(0, 16);
         data.fechaHoraRecepcion = now;
         
+        // Helper to process items with images
+        const processItems = async (items: any[]) => {
+            return Promise.all(items.map(async (item) => {
+                const evidences = await Promise.all((item.evidences || []).map(async (file: any) => {
+                    if (file instanceof File) {
+                        return new Promise<string>((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result as string);
+                            reader.readAsDataURL(file);
+                        });
+                    }
+                    return file;
+                }));
+                return { ...item, evidences };
+            }));
+        };
+
+        const herramientas = await processItems(data.herramientas);
+        const refacciones = await processItems(data.refacciones);
+        
         // Include templateId if available
         const payload = {
             ...data,
+            herramientas,
+            refacciones,
             templateId: template?._id
         };
 
         console.log('Warehouse Report Data:', payload);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        alert('Reporte de almacén generado (ver consola)');
+        
+        try {
+            const result = await createReportMutation.mutateAsync(payload);
+            alert('Reporte de almacén generado');
+            router.push(`/almacen/${(result as any)._id}`);
+        } catch (error) {
+            console.error("Error creating warehouse report:", error);
+            alert('Error al generar el reporte');
+        }
     };
 
     return (

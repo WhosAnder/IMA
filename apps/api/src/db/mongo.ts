@@ -23,3 +23,17 @@ export async function getTemplateCollection(): Promise<Collection<Template>> {
   const db = client.db(dbName);
   return db.collection<Template>('templates');
 }
+
+import { WorkReport, WarehouseReport } from '../reports/types';
+
+export async function getWorkReportCollection(): Promise<Collection<WorkReport>> {
+  const client = await getClient();
+  const db = client.db(dbName);
+  return db.collection<WorkReport>('work_reports');
+}
+
+export async function getWarehouseReportCollection(): Promise<Collection<WarehouseReport>> {
+  const client = await getClient();
+  const db = client.db(dbName);
+  return db.collection<WarehouseReport>('warehouse_reports');
+}
