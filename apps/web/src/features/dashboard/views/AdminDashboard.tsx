@@ -6,7 +6,7 @@ import { apiGet } from "@/shared/lib/api";
 import { themes } from "@/shared/theme/colors";
 import { Plus, FileText, Package, TrendingUp } from "lucide-react";
 import type { WorkReportListItem } from "@/features/reports/types/workReportList";
-import type { WarehouseReportListItem } from "@/features/warehouse/types/warehouseReportList";
+import { WarehouseReportListItem } from '@/features/almacen/types/warehouseReportList';
 
 export function AdminDashboard() {
   const themeColor = themes.admin.primary;

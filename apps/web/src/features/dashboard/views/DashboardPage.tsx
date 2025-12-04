@@ -13,7 +13,7 @@ export function DashboardPage() {
     content = <AdminDashboard />;
   } else if (user.role === "supervisor") {
     content = <SupervisorDashboard />;
-  } else if (user.role === "warehouse-manager") {
+  } else if (user.role === "almacenista") {
     content = <WarehouseDashboard />;
   }
 

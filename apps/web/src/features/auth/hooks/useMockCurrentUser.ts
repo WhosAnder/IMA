@@ -14,7 +14,7 @@ export function useMockCurrentUser(): CurrentUser {
 
     if (
       roleParam &&
-      ["admin", "supervisor", "warehouse-manager"].includes(roleParam)
+      ["admin", "supervisor", "almacenista"].includes(roleParam)
     ) {
       setRole(roleParam);
     }

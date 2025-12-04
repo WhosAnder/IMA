@@ -26,7 +26,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const themeColor =
     user.role === "admin"
       ? themes.admin.primary
-      : user.role === "warehouse-manager"
+      : user.role === "almacenista"
         ? themes.warehouse.primary
         : themes.work.primary;
 

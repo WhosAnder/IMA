@@ -1,7 +1,7 @@
-import { WorkReport } from "../types/workReport";
-import { WorkReportListItem } from "../types/workReportList";
-import { WarehouseReport } from "../types/warehouseReport";
-import { WarehouseReportListItem } from "../types/warehouseReportList";
+import { WorkReport } from "@/features/reports/types/workReport";
+import { WorkReportListItem } from "@/features/reports/types/workReportList";
+import { WarehouseReport } from "@/features/almacen/types/warehouseReport";
+import { WarehouseReportListItem } from '@/features/almacen/types/warehouseReportList';
 import { API_URL } from "../config/env";
 
 // Work reports

@@ -23,7 +23,7 @@ export const navConfig: Record<UserRole, RoleNavConfig> = {
       { label: "Reportes de trabajo", href: "/reports" },
     ],
   },
-  "warehouse-manager": {
+  almacenista: {
     main: [
       { label: "Dashboard", href: "/dashboard" },
       { label: "Reportes de almacén", href: "/warehouse" },
