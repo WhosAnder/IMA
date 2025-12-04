@@ -15,6 +15,8 @@ export const warehouseReportSchema = z.object({
     subsistema: z.string().min(1, "El subsistema es obligatorio"),
     fechaHoraEntrega: z.string().min(1, "La fecha de entrega es obligatoria"),
     turno: z.string(),
+    tipoMantenimiento: z.string().min(1, "El tipo de mantenimiento es obligatorio"),
+    frecuencia: z.string().min(1, "La frecuencia es obligatoria"),
 
     nombreQuienRecibe: z.string().min(1, "El nombre de quien recibe es obligatorio"),
     nombreAlmacenista: z.string().min(1, "El nombre del almacenista es obligatorio"),

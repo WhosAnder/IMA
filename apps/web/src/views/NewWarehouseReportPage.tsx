@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTemplateForReport } from '../hooks/useTemplates';
 import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
@@ -39,6 +40,8 @@ export const NewWarehouseReportPage: React.FC = () => {
             fechaHoraEntrega: new Date().toISOString().slice(0, 16),
             fechaHoraRecepcion: new Date().toISOString().slice(0, 16),
             turno: '',
+            tipoMantenimiento: '',
+            frecuencia: 'Eventual', // Default for warehouse? Or empty.
             nombreQuienRecibe: '',
             nombreAlmacenista: '',
             nombreQuienEntrega: '',
@@ -79,8 +82,38 @@ export const NewWarehouseReportPage: React.FC = () => {
         }
     }, [fechaHoraEntrega, setValue]);
 
+    // Auto-set start time on mount
+    useEffect(() => {
+        const currentStart = watch('fechaHoraEntrega');
+        if (!currentStart) {
+            setValue('fechaHoraEntrega', new Date().toISOString().slice(0, 16));
+        }
+    }, []);
+
+    // Template Selection
+    const subsistema = watch('subsistema');
+    const tipoMantenimiento = watch('tipoMantenimiento');
+    const frecuencia = watch('frecuencia');
+
+    const { data: template } = useTemplateForReport({
+        tipoReporte: 'warehouse',
+        subsistema,
+        tipoMantenimiento,
+        frecuencia
+    });
+
     const onSubmit = async (data: WarehouseReportFormValues) => {
-        console.log('Warehouse Report Data:', data);
+        // Auto-set end time (fechaHoraRecepcion)
+        const now = new Date().toISOString().slice(0, 16);
+        data.fechaHoraRecepcion = now;
+        
+        // Include templateId if available
+        const payload = {
+            ...data,
+            templateId: template?._id
+        };
+
+        console.log('Warehouse Report Data:', payload);
         await new Promise(resolve => setTimeout(resolve, 1000));
         alert('Reporte de almacén generado (ver consola)');
     };
@@ -138,6 +171,35 @@ export const NewWarehouseReportPage: React.FC = () => {
                                         readOnly
                                         className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Mantenimiento</label>
+                                    <select
+                                        {...register('tipoMantenimiento')}
+                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.tipoMantenimiento ? 'border-red-500' : 'border-gray-300'}`}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Entrega de material">Entrega de material</option>
+                                        <option value="Devolución de material">Devolución de material</option>
+                                        <option value="Préstamo de herramienta">Préstamo de herramienta</option>
+                                    </select>
+                                    {errors.tipoMantenimiento && <p className="mt-1 text-sm text-red-600">{errors.tipoMantenimiento.message}</p>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
+                                    <select
+                                        {...register('frecuencia')}
+                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.frecuencia ? 'border-red-500' : 'border-gray-300'}`}
+                                    >
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Eventual">Eventual</option>
+                                        <option value="Diaria">Diaria</option>
+                                        <option value="Semanal">Semanal</option>
+                                        <option value="Mensual">Mensual</option>
+                                    </select>
+                                    {errors.frecuencia && <p className="mt-1 text-sm text-red-600">{errors.frecuencia.message}</p>}
                                 </div>
 
                                 <div>
