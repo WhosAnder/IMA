@@ -1,9 +1,16 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { cors } from 'hono/cors';
 import { reportsRoute } from './routes/reports';
-import { warehouseReportsRoute } from './routes/warehouseReports';
+import { warehouseReportsRouter } from './routes/warehouseReports';
 
 const app = new Hono();
+
+// Enable CORS for the web app
+app.use('/*', cors({
+  origin: ['http://localhost:3000'],
+  credentials: true,
+}));
 
 // Health check endpoint
 app.get('/health', (c) => {
@@ -22,7 +29,7 @@ api.get('/ping', (c) => c.json({ message: 'pong' }));
 
 // Mount report routes
 api.route('/reports', reportsRoute);
-api.route('/warehouse-reports', warehouseReportsRoute);
+api.route('/warehouse-reports', warehouseReportsRouter);
 
 // Mount API routes under /api prefix
 app.route('/api', api);

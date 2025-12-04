@@ -1,11 +1,4 @@
-export interface WorkReportListItem {
-  id: string;
-  folio: string;
-  subsistema: string;
-  fecha: string;
-  responsable: string;
-  turno: string;
-}
+import { WorkReportListItem } from "./workReportList";
 
 export interface WorkReportDetail {
   subsistema: string;

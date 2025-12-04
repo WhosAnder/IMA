@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "../index.css";
 import { QueryProvider } from "@/query/QueryProvider";
+import { AuthProvider } from "@/auth/AuthContext";
 
 export const metadata: Metadata = {
   title: "IMA Cloud",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <QueryProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>

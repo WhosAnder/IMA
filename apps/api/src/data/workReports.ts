@@ -80,3 +80,11 @@ export const workReportDetails: Record<string, WorkReportDetail> = {
     fechaHoraTermino: "2025-11-23T23:30",
   },
 };
+export const getWorkReportById = (id: string): (WorkReportListItem & WorkReportDetail) | undefined => {
+  const summary = workReports.find((r) => r.id === id);
+  const detail = workReportDetails[id];
+
+  if (!summary || !detail) return undefined;
+
+  return { ...summary, ...detail };
+};

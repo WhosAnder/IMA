@@ -1,3 +1,14 @@
+export interface WarehouseItem {
+  id: string;
+  name: string;
+  units: number;
+  observations: string;
+  evidences: {
+      id: string;
+      previewUrl: string;
+  }[];
+}
+
 export interface WarehouseReportListItem {
   id: string;
   folio: string;
@@ -5,14 +16,6 @@ export interface WarehouseReportListItem {
   fechaEntrega: string;
   responsableAlmacen: string;
   responsableRecepcion: string;
-}
-
-export interface WarehouseItem {
-  id: string;
-  name: string;
-  units: number;
-  observations: string;
-  evidences: any[];
 }
 
 export interface WarehouseReportDetail {
@@ -31,3 +34,5 @@ export interface WarehouseReportDetail {
   firmaAlmacenista?: string;
   firmaQuienEntrega?: string;
 }
+
+export type WarehouseReport = WarehouseReportListItem & WarehouseReportDetail;
