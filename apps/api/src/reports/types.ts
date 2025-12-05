@@ -8,6 +8,13 @@ export interface ReportToolOrPart {
   fotoUrls?: string[];
 }
 
+export interface ActivityDetail {
+  templateId: string;
+  realizado: boolean;
+  observaciones?: string;
+  evidencias?: any[]; // URLs or file objects
+}
+
 export interface WorkReport {
   _id?: ObjectId;
   folio: string;
@@ -19,17 +26,18 @@ export interface WorkReport {
   turno: string;
   tipoMantenimiento: string;
   frecuencia: string;
-  templateId?: string;
+  
+  templateIds?: string[]; // Kept for reference/querying
+  actividadesRealizadas?: ActivityDetail[];
   
   responsable: string; // nombreResponsable in frontend
   trabajadores: string[]; // equipoTrabajo in user request, trabajadores in frontend
   
-  inspeccionRealizada: boolean;
+  // Global fields (optional/legacy)
+  inspeccionRealizada?: boolean;
   observacionesActividad?: string;
-  evidencias?: any[]; // URLs or file objects
+  evidencias?: any[]; 
   
-  // Frontend sends string[], but we might want to normalize to objects later.
-  // For now, we'll keep it flexible or map it.
   herramientas: string[] | ReportToolOrPart[]; 
   refacciones: string[] | ReportToolOrPart[];
   

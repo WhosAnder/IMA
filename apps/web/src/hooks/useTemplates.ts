@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { getTemplates, getTemplateById, fetchTemplatesByParams, TemplateFilters } from "../api/templatesClient";
+import { fetchTemplates, fetchTemplateById, fetchTemplateFilters } from "../api/templatesClient";
+import { Template, TemplateFilters } from "@/types/template";
 
 export function useTemplates(filters: TemplateFilters = {}) {
   return useQuery({
     queryKey: ['templates', filters],
-    queryFn: () => getTemplates(filters)
+    queryFn: () => fetchTemplates(filters)
   });
 }
 
 export function useTemplate(id: string | undefined) {
   return useQuery({
     queryKey: ['template', id],
-    queryFn: () => getTemplateById(id!),
+    queryFn: () => fetchTemplateById(id!),
     enabled: !!id
   });
 }
@@ -24,7 +25,47 @@ export function useTemplateForReport(params: {
 }) {
   return useQuery({
     queryKey: ["templateForReport", params],
-    queryFn: () => fetchTemplatesByParams(params).then((list: any[]) => list[0] ?? null),
-    enabled: !!params.tipoReporte && !!params.subsistema, // Enable even if others are missing, but usually we want all
+    queryFn: async () => {
+      const list = await fetchTemplates(params);
+      return list[0] ?? null;
+    },
+    enabled: !!params.tipoReporte && !!params.subsistema,
+  });
+}
+
+export function useTemplateFilters(tipoReporte: 'work' | 'warehouse', subsistema?: string) {
+  return useQuery({
+    queryKey: ['templateFilters', tipoReporte, subsistema ?? 'ALL'],
+    queryFn: () => fetchTemplateFilters({ tipoReporte, subsistema }),
+    enabled: !!tipoReporte,
+  });
+}
+
+export function useActivitiesBySubsystemAndFrequency(params: {
+  tipoReporte: 'work' | 'warehouse';
+  subsistema?: string;
+  frecuenciaCodigo?: string;
+}) {
+  const { tipoReporte, subsistema, frecuenciaCodigo } = params;
+
+  return useQuery({
+    queryKey: ['activities', tipoReporte, subsistema ?? 'NONE', frecuenciaCodigo ?? 'NONE'],
+    queryFn: async () => {
+      if (!subsistema || !frecuenciaCodigo) return [];
+      // Reuse existing templates endpoint, filtering by tipoReporte, subsistema and frecuenciaCodigo
+      const templates = await fetchTemplates({
+        tipoReporte,
+        subsistema,
+        frecuenciaCodigo,
+      });
+      // Map templates to activities
+      return templates.map(t => ({
+        id: t._id, // Assuming _id is available on the template object from API
+        code: t.frecuenciaCodigo,
+        name: t.nombreCorto ?? t.descripcion ?? 'Sin nombre',
+        template: t // Return full template to access other fields if needed
+      }));
+    },
+    enabled: !!subsistema && !!frecuenciaCodigo,
   });
 }

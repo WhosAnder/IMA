@@ -1,37 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTemplateForReport } from '@/hooks/useTemplates';
+import { useTemplateFilters, useActivitiesBySubsystemAndFrequency } from '@/hooks/useTemplates';
 import { useCreateWorkReportMutation } from '@/hooks/useWorkReports';
-import { useForm, Controller, useWatch } from 'react-hook-form';
+import { useForm, Controller, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/shared/ui/Button';
 import { MultiSelect } from '@/shared/ui/MultiSelect';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
 import { ImageUpload } from '@/shared/ui/ImageUpload';
-import { WorkReportPreview } from '../components/WorkReportPreview';
-import { formatoTrabajoSchema } from '../utils/formatoTrabajoSchema';
+import { WorkReportPreview } from '../components/WorkReportPreview'; // We might need to update preview too, but focusing on form first
 import { workReportSchema, WorkReportFormValues } from '../schemas/workReportSchema';
-import { Save } from 'lucide-react';
-
-// Mock Data
-const mockSubsystems = [
-  { value: 'EQUIPO DE GUIA/ TRABAJO DE GUIA', label: 'Equipo de guia/ trabajo de guia' },
-  { value: 'VEHICULO', label: 'Vehiculo' },
-  { value: 'EQUIPO DE PROPULSION', label: 'Equipo de propulsion' },
-  { value: 'EQUIPO DE CONTROL DE TREN (ATC)', label: 'Equipo de control de tren (ATC)' },
-  { value: 'EQUIPO DE COMUNICACION', label: 'Equipo de comunicacion' },
-  { value: 'EQUIPO DE DISTRIBUCION DE POTENCIA DE BAJO VOLTAJE', label: 'Equipo de distribucion de potencia de bajo voltaje' },
-  { value: 'EQUIPO DE CONTROL CENTRAL Y SCADA', label: 'Equipo de control central y SCADA' },
-  { value: 'EQUIPO DE ESTACION', label: 'Equipo de estacion' },
-  { value: 'EQUIPO DE MANTENIMIENTO', label: 'Equipo de mantenimiento' },
-];
-
-const mockFrequencies = [
-  { value: 'diaria', label: 'Diaria' },
-  { value: 'semanal', label: 'Semanal' },
-  { value: 'mensual', label: 'Mensual' },
-  { value: 'otra', label: 'Otra' },
-];
+import { Save, Loader2, AlertCircle, Check, X } from 'lucide-react';
+import Image from 'next/image';
 
 const mockWorkers = [
   { value: 'ana_garcia', label: 'Ana García' },
@@ -56,7 +36,6 @@ const mockSpareParts = [
   { value: 'tornillos', label: 'Tornillos' },
 ];
 
-
 export const NewWorkReportPage: React.FC = () => {
   const {
     register,
@@ -70,43 +49,52 @@ export const NewWorkReportPage: React.FC = () => {
     defaultValues: {
       fechaHoraInicio: new Date().toISOString().slice(0, 16),
       turno: '',
-      tipoMantenimiento: '',
       trabajadores: [],
-      inspeccionRealizada: false,
+      actividadesRealizadas: [],
       herramientas: [],
       refacciones: [],
-      nombreResponsable: 'Juan Supervisor', // Mock user
+      nombreResponsable: 'Juan Supervisor',
       firmaResponsable: undefined,
+      templateIds: [],
     }
   });
 
+  const { fields, append, remove, replace } = useFieldArray({
+    control,
+    name: "actividadesRealizadas"
+  });
+
   const fechaHoraInicio = watch('fechaHoraInicio');
-  const inspeccionRealizada = watch('inspeccionRealizada');
+  const subsistema = watch('subsistema');
+  const frecuencia = watch('frecuencia');
 
-  // Watch all values for preview
-  const watchedValues = useWatch({ control });
+  // --- Dynamic Filtering Logic ---
+  const { data: filtersData, isLoading: isLoadingFilters } = useTemplateFilters('work');
+  const subsystems = filtersData?.subsistemas || [];
 
-  // Prepare values for preview component
-  const previewValues = {
-    subsistema: watchedValues.subsistema,
-    ubicacion: watchedValues.ubicacion,
-    fechaHoraInicio: watchedValues.fechaHoraInicio,
-    turno: watchedValues.turno,
-    frecuencia: watchedValues.frecuencia,
-    trabajadores: watchedValues.trabajadores,
+  const { data: freqData, isLoading: isLoadingFreq } = useTemplateFilters('work', subsistema || undefined);
+  const frequencies = freqData?.frecuencias || [];
 
-    inspeccionRealizada: watchedValues.inspeccionRealizada,
-    observacionesActividad: watchedValues.observacionesActividad,
-    evidenciasCount: watchedValues.evidencias?.length ?? 0,
+  const { data: activities, isLoading: isLoadingActivities } = useActivitiesBySubsystemAndFrequency({
+    tipoReporte: 'work',
+    subsistema: subsistema || undefined,
+    frecuenciaCodigo: frecuencia || undefined,
+  });
 
-    herramientas: watchedValues.herramientas,
-    refacciones: watchedValues.refacciones,
-
-    observacionesGenerales: watchedValues.observacionesGenerales,
-    nombreResponsable: watchedValues.nombreResponsable,
-    fechaHoraTermino: watchedValues.fechaHoraTermino,
-    firmaResponsable: watchedValues.firmaResponsable,
-  };
+  // Auto-populate activities when they load
+  useEffect(() => {
+    if (activities && activities.length > 0) {
+      const newActivities = activities.map(a => ({
+        templateId: a.id,
+        realizado: false,
+        observaciones: '',
+        evidencias: []
+      }));
+      replace(newActivities);
+    } else {
+      replace([]);
+    }
+  }, [activities, replace]);
 
   // Auto-calculate shift
   useEffect(() => {
@@ -114,18 +102,11 @@ export const NewWorkReportPage: React.FC = () => {
       const date = new Date(fechaHoraInicio);
       const hour = date.getHours();
       let shift = 'Nocturno';
-
-      if (hour >= 6 && hour < 14) {
-        shift = 'Matutino';
-      } else if (hour >= 14 && hour < 22) {
-        shift = 'Vespertino';
-      }
-
+      if (hour >= 6 && hour < 14) shift = 'Matutino';
+      else if (hour >= 14 && hour < 22) shift = 'Vespertino';
       setValue('turno', shift);
 
-      // Auto-set end time to start time + 1 hour for convenience
       const endDate = new Date(date.getTime() + 60 * 60 * 1000);
-      // Handle timezone offset for datetime-local input
       const offset = endDate.getTimezoneOffset() * 60000;
       const localISOTime = (new Date(endDate.getTime() - offset)).toISOString().slice(0, 16);
       setValue('fechaHoraTermino', localISOTime);
@@ -140,55 +121,43 @@ export const NewWorkReportPage: React.FC = () => {
     }
   }, []);
 
-  // Template Selection
-  const subsistema = watch('subsistema');
-  const tipoMantenimiento = watch('tipoMantenimiento');
-  const frecuencia = watch('frecuencia');
-
-  const { data: template } = useTemplateForReport({
-    tipoReporte: 'work',
-    subsistema,
-    tipoMantenimiento,
-    frecuencia
-  });
-
-  // Mutation
   const createReportMutation = useCreateWorkReportMutation();
   const router = useRouter();
 
   const onSubmit = async (data: WorkReportFormValues) => {
-    // Auto-set end time
-    const now = new Date().toISOString().slice(0, 16);
-    data.fechaHoraTermino = now;
-    
-    // Convert evidences (File objects) to base64 or handle upload
-    // For now, we'll just map them to their names or skip if they are Files, 
-    // but ideally we should upload them first or convert to base64.
-    // Let's convert to base64 for simplicity in this demo.
-    const evidencesBase64 = await Promise.all(
-      (data.evidencias || []).map(async (file: any) => {
-        if (file instanceof File) {
-          return new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
-        }
-        return file;
+    if (!data.actividadesRealizadas || data.actividadesRealizadas.length === 0) {
+      alert('No hay actividades para reportar.');
+      return;
+    }
+
+    // Convert evidences for each activity
+    const actividadesConEvidencias = await Promise.all(
+      data.actividadesRealizadas.map(async (act) => {
+        const evidencias = await Promise.all((act.evidencias || []).map(async (file: any) => {
+          if (file instanceof File) {
+            return new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+          }
+          return file;
+        }));
+        return { ...act, evidencias };
       })
     );
 
-    // Include templateId if available
     const payload = {
-      ...data,
-      evidencias: evidencesBase64,
-      templateId: template?._id
+        ...data,
+        actividadesRealizadas: actividadesConEvidencias,
+        templateIds: data.actividadesRealizadas.map(a => a.templateId),
+        tipoMantenimiento: 'Preventivo'
     };
 
     console.log('Form Data Submitted:', payload);
     
     try {
-      const result = await createReportMutation.mutateAsync(payload);
+      const result = await createReportMutation.mutateAsync(payload as any);
       alert('Reporte generado exitosamente');
       router.push(`/reports/${(result as any)._id}`);
     } catch (error) {
@@ -197,279 +166,278 @@ export const NewWorkReportPage: React.FC = () => {
     }
   };
 
+  // Helper to get activity name by ID
+  const getActivityName = (id: string) => {
+    return activities?.find(a => a.id === id)?.name || 'Actividad desconocida';
+  };
+
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 pb-12 px-4 sm:px-6 lg:px-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{formatoTrabajoSchema.name}</h1>
-        <p className="text-gray-500">Llena el formato de trabajo para registrar la actividad realizada.</p>
-      </div>
+    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8 font-sans">
+      <div className="max-w-[1200px] mx-auto bg-white rounded-lg shadow-xl overflow-hidden border-4 border-blue-900">
+        
+        {/* Header */}
+        <div className="bg-white p-6 border-b-4 border-blue-900 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4">
+             {/* Logo Placeholder */}
+             <div className="w-48 h-16 bg-gray-200 flex items-center justify-center text-gray-400 font-bold italic">
+                LOGO IMA
+             </div>
+          </div>
+          <div className="text-right">
+            <h1 className="text-2xl font-bold text-blue-900 uppercase tracking-wide">Formato de trabajo proyecto</h1>
+            <h2 className="text-xl font-bold text-blue-900 uppercase tracking-wide">AEROTREN AICM</h2>
+          </div>
+        </div>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        {/* Left Column: Form */}
-        <div>
-          <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-8">
+        <form onSubmit={handleSubmit(onSubmit as any)} className="p-6 space-y-6">
+          
+          {/* Grid Layout for General Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            
+            {/* Row 1 */}
+            <div className="flex items-center">
+              <label className="w-32 bg-blue-900 text-white font-bold py-2 px-3 rounded-l-md text-sm uppercase">Subsistema</label>
+              <select
+                {...register('subsistema')}
+                className="flex-1 border-2 border-blue-200 rounded-r-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                disabled={isLoadingFilters}
+              >
+                <option value="">Seleccionar...</option>
+                {subsystems.map(sub => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center">
+              <label className="w-32 bg-blue-900 text-white font-bold py-2 px-3 rounded-l-md text-sm uppercase">Fecha y Hora</label>
+              <input
+                type="datetime-local"
+                {...register('fechaHoraInicio')}
+                className="flex-1 border-2 border-blue-200 rounded-r-md py-2 px-3 focus:outline-none focus:border-blue-500"
+              />
+            </div>
 
-            {/* Section 1: General Data */}
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">1</div>
-                <h2 className="text-lg font-semibold text-gray-800">Datos generales</h2>
-              </div>
+            {/* Row 2 */}
+            <div className="flex items-center">
+              <label className="w-32 bg-blue-900 text-white font-bold py-2 px-3 rounded-l-md text-sm uppercase">Ubicación</label>
+              <input
+                type="text"
+                {...register('ubicacion')}
+                className="flex-1 border-2 border-blue-200 rounded-r-md py-2 px-3 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div className="flex items-center">
+              <label className="w-32 bg-blue-900 text-white font-bold py-2 px-3 rounded-l-md text-sm uppercase">Turno</label>
+              <input
+                type="text"
+                {...register('turno')}
+                readOnly
+                className="flex-1 border-2 border-blue-200 rounded-r-md py-2 px-3 bg-gray-50"
+              />
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subsistema</label>
-                  <select
-                    {...register('subsistema')}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.subsistema ? 'border-red-500' : 'border-gray-300'}`}
-                  >
-                    <option value="">Seleccionar...</option>
-                    {mockSubsystems.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                  {errors.subsistema && <p className="mt-1 text-sm text-red-600">{errors.subsistema.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
-                  <input
-                    type="text"
-                    {...register('ubicacion')}
-                    placeholder="Ej. Estación A – Andén 2"
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.ubicacion ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  {errors.ubicacion && <p className="mt-1 text-sm text-red-600">{errors.ubicacion.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de inicio</label>
-                  <input
-                    type="datetime-local"
-                    {...register('fechaHoraInicio')}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraInicio ? 'border-red-500' : 'border-gray-300'}`}
-                  />
-                  {errors.fechaHoraInicio && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraInicio.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-                  <input
-                    type="text"
-                    {...register('turno')}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
-                  <select
-                    {...register('frecuencia')}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.frecuencia ? 'border-red-500' : 'border-gray-300'}`}
-                  >
-                    <option value="">Seleccionar...</option>
-                    {mockFrequencies.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                  {errors.frecuencia && <p className="mt-1 text-sm text-red-600">{errors.frecuencia.message}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Mantenimiento</label>
-                  <select
-                    {...register('tipoMantenimiento')}
-                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.tipoMantenimiento ? 'border-red-500' : 'border-gray-300'}`}
-                  >
-                    <option value="">Seleccionar...</option>
-                    <option value="Preventivo A">Preventivo A</option>
-                    <option value="Correctivo">Correctivo</option>
-                    <option value="Inspección visual">Inspección visual</option>
-                  </select>
-                  {errors.tipoMantenimiento && <p className="mt-1 text-sm text-red-600">{errors.tipoMantenimiento.message}</p>}
-                </div>
-
-                <div className="md:col-span-2">
-                  <Controller
+            {/* Row 3 */}
+            <div className="flex flex-col gap-1">
+               <label className="bg-blue-900 text-white font-bold py-1 px-3 rounded-t-md text-sm uppercase w-full">Frecuencia:</label>
+               <select
+                {...register('frecuencia')}
+                className="w-full border-2 border-blue-200 rounded-b-md py-2 px-3 focus:outline-none focus:border-blue-500"
+                disabled={!subsistema || isLoadingFreq}
+              >
+                <option value="">{subsistema ? 'Seleccionar...' : 'Selecciona un subsistema primero'}</option>
+                {frequencies.map(freq => (
+                  <option key={freq.code} value={freq.code}>{freq.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+               <label className="bg-blue-900 text-white font-bold py-1 px-3 rounded-t-md text-sm uppercase w-full">Trabajadores Involucrados:</label>
+               <div className="border-2 border-blue-200 rounded-b-md">
+                 <Controller
                     name="trabajadores"
                     control={control}
                     render={({ field }) => (
                       <MultiSelect
-                        label="Trabajadores"
                         options={mockWorkers}
                         value={field.value}
                         onChange={field.onChange}
-                        error={errors.trabajadores?.message}
+                        placeholder="Seleccionar..."
+                        className="border-0 shadow-none"
                       />
                     )}
                   />
-                </div>
-              </div>
-            </section>
+               </div>
+            </div>
 
-            {/* Section 2: Activity */}
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">2</div>
-                <h2 className="text-lg font-semibold text-gray-800">Actividad</h2>
-              </div>
+          </div>
 
-              <div className="space-y-6">
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="inspeccionRealizada"
-                    {...register('inspeccionRealizada')}
-                    className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="inspeccionRealizada" className="font-medium text-gray-700">
-                    Inspección realizada
-                  </label>
-                </div>
+          {/* Activities Table */}
+          <div className="mt-8">
+            <div className="grid grid-cols-[2fr_0.5fr_1.5fr_1fr] gap-2 mb-2">
+               <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-md uppercase text-center">Actividad</div>
+               <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-md uppercase text-center">SI/NO</div>
+               <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-md uppercase text-center">Observaciones</div>
+               <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-md uppercase text-center">Evidencias</div>
+            </div>
 
-                {inspeccionRealizada && (
-                  <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones de la actividad</label>
-                      <textarea
-                        {...register('observacionesActividad')}
-                        rows={4}
-                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.observacionesActividad ? 'border-red-500' : 'border-gray-300'}`}
-                        placeholder="Describa los hallazgos o actividades realizadas..."
-                      />
-                      {errors.observacionesActividad && <p className="mt-1 text-sm text-red-600">{errors.observacionesActividad.message}</p>}
-                    </div>
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-[2fr_0.5fr_1.5fr_1fr] gap-2 items-start">
+                  {/* Activity Name */}
+                  <div className="border-2 border-blue-200 rounded-md p-3 min-h-[100px] flex items-center bg-white">
+                    <span className="font-medium text-gray-800">{getActivityName(field.templateId)}</span>
+                  </div>
 
-                    <div>
-                      <Controller
-                        name="evidencias"
+                  {/* SI/NO Toggle */}
+                  <div className="border-2 border-blue-200 rounded-md p-3 min-h-[100px] flex items-center justify-center bg-white">
+                    <Controller
+                      name={`actividadesRealizadas.${index}.realizado`}
+                      control={control}
+                      render={({ field: { value, onChange } }) => (
+                        <button
+                          type="button"
+                          onClick={() => onChange(!value)}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${value ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}
+                        >
+                          {value ? <Check className="w-8 h-8" /> : <X className="w-8 h-8" />}
+                        </button>
+                      )}
+                    />
+                  </div>
+
+                  {/* Observations */}
+                  <div className="border-2 border-blue-200 rounded-md min-h-[100px] bg-white">
+                    <textarea
+                      {...register(`actividadesRealizadas.${index}.observaciones`)}
+                      className="w-full h-full p-3 resize-none focus:outline-none rounded-md"
+                      placeholder="Escriba observaciones..."
+                    />
+                  </div>
+
+                  {/* Evidences */}
+                  <div className="border-2 border-blue-200 rounded-md min-h-[100px] p-2 bg-white flex flex-col justify-center">
+                     <Controller
+                        name={`actividadesRealizadas.${index}.evidencias`}
                         control={control}
                         render={({ field }) => (
                           <ImageUpload
-                            label="Evidencias fotográficas"
                             onChange={field.onChange}
-                            error={errors.evidencias?.message as string}
+                            compact
                           />
                         )}
                       />
-                    </div>
                   </div>
-                )}
-              </div>
-            </section>
-
-            {/* Section 3: Tools and Materials */}
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">3</div>
-                <h2 className="text-lg font-semibold text-gray-800">Herramientas y refacciones</h2>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                <Controller
-                  name="herramientas"
-                  control={control}
-                  render={({ field }) => (
-                    <MultiSelect
-                      label="Herramientas utilizadas"
-                      options={mockTools}
-                      value={field.value || []}
-                      onChange={field.onChange}
-                      placeholder="Seleccionar herramientas..."
-                    />
-                  )}
-                />
-
-                <Controller
-                  name="refacciones"
-                  control={control}
-                  render={({ field }) => (
-                    <MultiSelect
-                      label="Refacciones utilizadas"
-                      options={mockSpareParts}
-                      value={field.value || []}
-                      onChange={field.onChange}
-                      placeholder="Seleccionar refacciones..."
-                    />
-                  )}
-                />
-              </div>
-            </section>
-
-            {/* Section 4: Closure */}
-            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-              <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">4</div>
-                <h2 className="text-lg font-semibold text-gray-800">Cierre</h2>
-              </div>
-
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
-                  <textarea
-                    {...register('observacionesGenerales')}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Comentarios finales..."
-                  />
                 </div>
+              ))}
+              
+              {fields.length === 0 && (
+                <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-300 rounded-md">
+                  Selecciona un subsistema y frecuencia para ver las actividades.
+                </div>
+              )}
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del responsable</label>
-                    <input
+          {/* Tools & Parts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+            <div>
+               <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-t-md uppercase text-center">Herramientas Utilizadas:</div>
+               <div className="border-2 border-blue-200 rounded-b-md p-4 bg-white min-h-[150px]">
+                  <Controller
+                      name="herramientas"
+                      control={control}
+                      render={({ field }) => (
+                        <MultiSelect
+                          options={mockTools}
+                          value={field.value || []}
+                          onChange={field.onChange}
+                          placeholder="Seleccionar..."
+                          className="border-0 shadow-none"
+                        />
+                      )}
+                    />
+               </div>
+            </div>
+            <div>
+               <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-t-md uppercase text-center">Refacciones Utilizadas:</div>
+               <div className="border-2 border-blue-200 rounded-b-md p-4 bg-white min-h-[150px]">
+                  <Controller
+                      name="refacciones"
+                      control={control}
+                      render={({ field }) => (
+                        <MultiSelect
+                          options={mockSpareParts}
+                          value={field.value || []}
+                          onChange={field.onChange}
+                          placeholder="Seleccionar..."
+                          className="border-0 shadow-none"
+                        />
+                      )}
+                    />
+               </div>
+            </div>
+          </div>
+
+          {/* General Observations */}
+          <div className="mt-8">
+             <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-t-md uppercase text-center">Observaciones Generales</div>
+             <div className="border-2 border-blue-200 rounded-b-md bg-white">
+                <textarea
+                  {...register('observacionesGenerales')}
+                  rows={4}
+                  className="w-full p-4 resize-none focus:outline-none rounded-b-md"
+                  placeholder="Comentarios generales del reporte..."
+                />
+             </div>
+          </div>
+
+          {/* Footer: Signatures & End Date */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+             <div>
+                <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-t-md uppercase text-center">Nombre y Firma de Supervisor</div>
+                <div className="border-2 border-blue-200 rounded-b-md p-4 bg-white">
+                   <input
                       type="text"
                       {...register('nombreResponsable')}
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.nombreResponsable ? 'border-red-500' : 'border-gray-300'}`}
+                      className="w-full border-b border-gray-300 py-2 mb-4 focus:outline-none focus:border-blue-500"
+                      placeholder="Nombre del supervisor"
                     />
-                    {errors.nombreResponsable && <p className="mt-1 text-sm text-red-600">{errors.nombreResponsable.message}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de término</label>
-                    <input
+                   <Controller
+                      name="firmaResponsable"
+                      control={control}
+                      render={({ field }) => (
+                        <SignaturePad
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
+                </div>
+             </div>
+             <div>
+                <div className="bg-blue-900 text-white font-bold py-2 px-4 rounded-t-md uppercase text-center">Fecha y Hora de Termino</div>
+                <div className="border-2 border-blue-200 rounded-b-md p-4 bg-white flex items-center justify-center h-full">
+                   <input
                       type="datetime-local"
                       {...register('fechaHoraTermino')}
-                      className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.fechaHoraTermino ? 'border-red-500' : 'border-gray-300'}`}
+                      className="w-full border-2 border-blue-200 rounded-md py-2 px-3 focus:outline-none focus:border-blue-500"
                     />
-                    {errors.fechaHoraTermino && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraTermino.message}</p>}
-                  </div>
                 </div>
+             </div>
+          </div>
 
-                <div>
-                  <Controller
-                    name="firmaResponsable"
-                    control={control}
-                    render={({ field }) => (
-                      <SignaturePad
-                        label="Firma del responsable"
-                        onChange={field.onChange}
-                        error={errors.firmaResponsable?.message}
-                      />
-                    )}
-                  />
-                </div>
-              </div>
-            </section>
+          {/* Submit Button */}
+          <div className="flex justify-end pt-8">
+            <Button
+              type="submit"
+              className="w-full md:w-auto px-12 py-4 text-lg bg-blue-900 hover:bg-blue-800 text-white font-bold rounded-md shadow-lg transform transition hover:scale-105"
+              isLoading={isSubmitting}
+            >
+              <Save className="w-6 h-6 mr-2" />
+              GUARDAR REPORTE
+            </Button>
+          </div>
 
-            <div className="flex justify-end pt-4">
-              <Button
-                type="submit"
-                className="w-full md:w-auto px-8 py-3 text-lg"
-                isLoading={isSubmitting}
-              >
-                <Save className="w-5 h-5 mr-2" />
-                Generar reporte
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {/* Right Column: Preview */}
-        <div>
-          <WorkReportPreview values={previewValues} />
-        </div>
+        </form>
       </div>
     </div>
   );
