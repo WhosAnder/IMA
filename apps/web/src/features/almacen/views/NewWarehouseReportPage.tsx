@@ -10,7 +10,7 @@ import { ImageUpload } from '@/shared/ui/ImageUpload';
 import { WarehouseReportPreview } from '../components/WarehouseReportPreview';
 import { warehouseReportSchema, WarehouseReportFormValues } from '../schemas/warehouseReportSchema';
 import { themes } from '@/shared/theme/colors';
-import { Save, Plus, Trash2 } from 'lucide-react';
+import { Save, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
 
 // Mock Subsystems (reused from Work Report logic or defined anew)
 const mockSubsystems = [
@@ -97,7 +97,7 @@ export const NewWarehouseReportPage: React.FC = () => {
     const tipoMantenimiento = watch('tipoMantenimiento');
     const frecuencia = watch('frecuencia');
 
-    const { data: template } = useTemplateForReport({
+    const { data: template, isLoading: isLoadingTemplate } = useTemplateForReport({
         tipoReporte: 'warehouse',
         subsistema,
         tipoMantenimiento,
@@ -152,6 +152,12 @@ export const NewWarehouseReportPage: React.FC = () => {
             alert('Error al generar el reporte');
         }
     };
+
+    const showHerramientas = template?.secciones.herramientas.enabled ?? true;
+    const showRefacciones = template?.secciones.refacciones.enabled ?? true;
+    const showObservaciones = template?.secciones.observacionesGenerales.enabled ?? true;
+    const showFechas = template?.secciones.fechas.enabled ?? true;
+    const showFirmas = template?.secciones.firmas.enabled ?? true;
 
     return (
         <div className="max-w-[1600px] mx-auto space-y-8 pb-12 px-4 sm:px-6 lg:px-8">
@@ -257,243 +263,277 @@ export const NewWarehouseReportPage: React.FC = () => {
                                     {errors.nombreQuienRecibe && <p className="mt-1 text-sm text-red-600">{errors.nombreQuienRecibe.message}</p>}
                                 </div>
                             </div>
+
+                            {/* Template Status */}
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                                {isLoadingTemplate && (
+                                    <div className="flex items-center text-blue-600 text-sm">
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Buscando plantilla...
+                                    </div>
+                                )}
+                                {!isLoadingTemplate && template && (
+                                    <div className="flex items-center text-green-600 text-sm bg-green-50 p-2 rounded">
+                                        <span className="font-medium mr-2">Plantilla encontrada:</span>
+                                        {template.nombreCorto} {template.codigoMantenimiento && `(${template.codigoMantenimiento})`}
+                                    </div>
+                                )}
+                                {!isLoadingTemplate && !template && subsistema && tipoMantenimiento && (
+                                    <div className="flex items-center text-amber-600 text-sm bg-amber-50 p-2 rounded">
+                                        <AlertCircle className="w-4 h-4 mr-2" />
+                                        No se encontró plantilla específica. Se usarán las secciones por defecto.
+                                    </div>
+                                )}
+                            </div>
                         </section>
 
                         {/* 2. Herramientas */}
-                        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>2</div>
-                                    <h2 className="text-lg font-semibold text-gray-800">Herramientas</h2>
+                        {showHerramientas && (
+                            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>2</div>
+                                        <h2 className="text-lg font-semibold text-gray-800">Herramientas</h2>
+                                    </div>
+                                    <Button type="button" variant="secondary" onClick={() => appendTool({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}>
+                                        <Plus className="w-4 h-4 mr-2" /> Agregar
+                                    </Button>
                                 </div>
-                                <Button type="button" variant="secondary" onClick={() => appendTool({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}>
-                                    <Plus className="w-4 h-4 mr-2" /> Agregar
-                                </Button>
-                            </div>
 
-                            <div className="space-y-6">
-                                {toolsFields.map((field, index) => (
-                                    <div key={field.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
-                                        <button
-                                            type="button"
-                                            onClick={() => removeTool(index)}
-                                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                <div className="space-y-6">
+                                    {toolsFields.map((field, index) => (
+                                        <div key={field.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => removeTool(index)}
+                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                            <div className="md:col-span-6">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Herramienta</label>
-                                                <input
-                                                    {...register(`herramientas.${index}.name`)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    placeholder="Nombre de la herramienta"
-                                                />
-                                                {errors.herramientas?.[index]?.name && <p className="text-xs text-red-500 mt-1">{errors.herramientas[index]?.name?.message}</p>}
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Unidades</label>
-                                                <input
-                                                    type="number"
-                                                    {...register(`herramientas.${index}.units`, { valueAsNumber: true })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                />
-                                                {errors.herramientas?.[index]?.units && <p className="text-xs text-red-500 mt-1">{errors.herramientas[index]?.units?.message}</p>}
-                                            </div>
-                                            <div className="md:col-span-4">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
-                                                <input
-                                                    {...register(`herramientas.${index}.observations`)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    placeholder="Opcional"
-                                                />
-                                            </div>
-                                            <div className="md:col-span-12">
-                                                <Controller
-                                                    name={`herramientas.${index}.evidences`}
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <ImageUpload
-                                                            label="Evidencias (máx 5)"
-                                                            onChange={field.onChange}
-                                                            maxFiles={5}
-                                                        />
-                                                    )}
-                                                />
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                <div className="md:col-span-6">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Herramienta</label>
+                                                    <input
+                                                        {...register(`herramientas.${index}.name`)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                        placeholder="Nombre de la herramienta"
+                                                    />
+                                                    {errors.herramientas?.[index]?.name && <p className="text-xs text-red-500 mt-1">{errors.herramientas[index]?.name?.message}</p>}
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Unidades</label>
+                                                    <input
+                                                        type="number"
+                                                        {...register(`herramientas.${index}.units`, { valueAsNumber: true })}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                    />
+                                                    {errors.herramientas?.[index]?.units && <p className="text-xs text-red-500 mt-1">{errors.herramientas[index]?.units?.message}</p>}
+                                                </div>
+                                                <div className="md:col-span-4">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
+                                                    <input
+                                                        {...register(`herramientas.${index}.observations`)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                        placeholder="Opcional"
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-12">
+                                                    <Controller
+                                                        name={`herramientas.${index}.evidences`}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <ImageUpload
+                                                                label="Evidencias (máx 5)"
+                                                                onChange={field.onChange}
+                                                                maxFiles={5}
+                                                            />
+                                                        )}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                                {toolsFields.length === 0 && (
-                                    <p className="text-sm text-gray-500 text-center py-4">No hay herramientas agregadas.</p>
-                                )}
-                            </div>
-                        </section>
+                                    ))}
+                                    {toolsFields.length === 0 && (
+                                        <p className="text-sm text-gray-500 text-center py-4">No hay herramientas agregadas.</p>
+                                    )}
+                                </div>
+                            </section>
+                        )}
 
                         {/* 3. Refacciones */}
-                        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>3</div>
-                                    <h2 className="text-lg font-semibold text-gray-800">Refacciones</h2>
+                        {showRefacciones && (
+                            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>3</div>
+                                        <h2 className="text-lg font-semibold text-gray-800">Refacciones</h2>
+                                    </div>
+                                    <Button type="button" variant="secondary" onClick={() => appendPart({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}>
+                                        <Plus className="w-4 h-4 mr-2" /> Agregar
+                                    </Button>
                                 </div>
-                                <Button type="button" variant="secondary" onClick={() => appendPart({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}>
-                                    <Plus className="w-4 h-4 mr-2" /> Agregar
-                                </Button>
-                            </div>
 
-                            <div className="space-y-6">
-                                {partsFields.map((field, index) => (
-                                    <div key={field.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
-                                        <button
-                                            type="button"
-                                            onClick={() => removePart(index)}
-                                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                <div className="space-y-6">
+                                    {partsFields.map((field, index) => (
+                                        <div key={field.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
+                                            <button
+                                                type="button"
+                                                onClick={() => removePart(index)}
+                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                            <div className="md:col-span-6">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Refacción</label>
-                                                <input
-                                                    {...register(`refacciones.${index}.name`)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    placeholder="Nombre de la refacción"
-                                                />
-                                                {errors.refacciones?.[index]?.name && <p className="text-xs text-red-500 mt-1">{errors.refacciones[index]?.name?.message}</p>}
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                <div className="md:col-span-6">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Refacción</label>
+                                                    <input
+                                                        {...register(`refacciones.${index}.name`)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                        placeholder="Nombre de la refacción"
+                                                    />
+                                                    {errors.refacciones?.[index]?.name && <p className="text-xs text-red-500 mt-1">{errors.refacciones[index]?.name?.message}</p>}
+                                                </div>
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Unidades</label>
+                                                    <input
+                                                        type="number"
+                                                        {...register(`refacciones.${index}.units`, { valueAsNumber: true })}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                    />
+                                                    {errors.refacciones?.[index]?.units && <p className="text-xs text-red-500 mt-1">{errors.refacciones[index]?.units?.message}</p>}
+                                                </div>
+                                                <div className="md:col-span-4">
+                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
+                                                    <input
+                                                        {...register(`refacciones.${index}.observations`)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                        placeholder="Opcional"
+                                                    />
+                                                </div>
+                                                <div className="md:col-span-12">
+                                                    <Controller
+                                                        name={`refacciones.${index}.evidences`}
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <ImageUpload
+                                                                label="Evidencias (máx 5)"
+                                                                onChange={field.onChange}
+                                                                maxFiles={5}
+                                                            />
+                                                        )}
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="md:col-span-2">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Unidades</label>
+                                        </div>
+                                    ))}
+                                    {partsFields.length === 0 && (
+                                        <p className="text-sm text-gray-500 text-center py-4">No hay refacciones agregadas.</p>
+                                    )}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* 4. Cierre */}
+                        {(showObservaciones || showFechas || showFirmas) && (
+                            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+                                <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>4</div>
+                                    <h2 className="text-lg font-semibold text-gray-800">Cierre</h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-6">
+                                    {showObservaciones && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
+                                            <textarea
+                                                {...register('observacionesGenerales')}
+                                                rows={3}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2"
+                                                placeholder="Comentarios finales..."
+                                            />
+                                        </div>
+                                    )}
+
+                                    {showFechas && (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de recepción</label>
                                                 <input
-                                                    type="number"
-                                                    {...register(`refacciones.${index}.units`, { valueAsNumber: true })}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                                    type="datetime-local"
+                                                    {...register('fechaHoraRecepcion')}
+                                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.fechaHoraRecepcion ? 'border-red-500' : 'border-gray-300'}`}
                                                 />
-                                                {errors.refacciones?.[index]?.units && <p className="text-xs text-red-500 mt-1">{errors.refacciones[index]?.units?.message}</p>}
+                                                {errors.fechaHoraRecepcion && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraRecepcion.message}</p>}
                                             </div>
-                                            <div className="md:col-span-4">
-                                                <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre quien entrega</label>
                                                 <input
-                                                    {...register(`refacciones.${index}.observations`)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    placeholder="Opcional"
+                                                    type="text"
+                                                    {...register('nombreQuienEntrega')}
+                                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreQuienEntrega ? 'border-red-500' : 'border-gray-300'}`}
                                                 />
+                                                {errors.nombreQuienEntrega && <p className="mt-1 text-sm text-red-600">{errors.nombreQuienEntrega.message}</p>}
                                             </div>
-                                            <div className="md:col-span-12">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Almacenista (Cierre)</label>
+                                                <input
+                                                    type="text"
+                                                    {...register('nombreAlmacenistaCierre')}
+                                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreAlmacenistaCierre ? 'border-red-500' : 'border-gray-300'}`}
+                                                />
+                                                {errors.nombreAlmacenistaCierre && <p className="mt-1 text-sm text-red-600">{errors.nombreAlmacenistaCierre.message}</p>}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {showFirmas && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div>
                                                 <Controller
-                                                    name={`refacciones.${index}.evidences`}
+                                                    name="firmaQuienEntrega"
                                                     control={control}
                                                     render={({ field }) => (
-                                                        <ImageUpload
-                                                            label="Evidencias (máx 5)"
+                                                        <SignaturePad
+                                                            label="Firma quien entrega"
                                                             onChange={field.onChange}
-                                                            maxFiles={5}
+                                                            error={errors.firmaQuienEntrega?.message}
+                                                        />
+                                                    )}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Controller
+                                                    name="firmaAlmacenista"
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <SignaturePad
+                                                            label="Firma almacenista"
+                                                            onChange={field.onChange}
+                                                            error={errors.firmaAlmacenista?.message}
+                                                        />
+                                                    )}
+                                                />
+                                            </div>
+                                            <div>
+                                                <Controller
+                                                    name="firmaQuienRecibe"
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <SignaturePad
+                                                            label="Firma quien recibe"
+                                                            onChange={field.onChange}
+                                                            error={errors.firmaQuienRecibe?.message}
                                                         />
                                                     )}
                                                 />
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                                {partsFields.length === 0 && (
-                                    <p className="text-sm text-gray-500 text-center py-4">No hay refacciones agregadas.</p>
-                                )}
-                            </div>
-                        </section>
-
-                        {/* 4. Cierre */}
-                        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                            <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>4</div>
-                                <h2 className="text-lg font-semibold text-gray-800">Cierre</h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
-                                    <textarea
-                                        {...register('observacionesGenerales')}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2"
-                                        placeholder="Comentarios finales..."
-                                    />
+                                    )}
                                 </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de recepción</label>
-                                        <input
-                                            type="datetime-local"
-                                            {...register('fechaHoraRecepcion')}
-                                            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.fechaHoraRecepcion ? 'border-red-500' : 'border-gray-300'}`}
-                                        />
-                                        {errors.fechaHoraRecepcion && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraRecepcion.message}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre quien entrega</label>
-                                        <input
-                                            type="text"
-                                            {...register('nombreQuienEntrega')}
-                                            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreQuienEntrega ? 'border-red-500' : 'border-gray-300'}`}
-                                        />
-                                        {errors.nombreQuienEntrega && <p className="mt-1 text-sm text-red-600">{errors.nombreQuienEntrega.message}</p>}
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Almacenista (Cierre)</label>
-                                        <input
-                                            type="text"
-                                            {...register('nombreAlmacenistaCierre')}
-                                            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreAlmacenistaCierre ? 'border-red-500' : 'border-gray-300'}`}
-                                        />
-                                        {errors.nombreAlmacenistaCierre && <p className="mt-1 text-sm text-red-600">{errors.nombreAlmacenistaCierre.message}</p>}
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div>
-                                        <Controller
-                                            name="firmaQuienEntrega"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <SignaturePad
-                                                    label="Firma quien entrega"
-                                                    onChange={field.onChange}
-                                                    error={errors.firmaQuienEntrega?.message}
-                                                />
-                                            )}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Controller
-                                            name="firmaAlmacenista"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <SignaturePad
-                                                    label="Firma almacenista"
-                                                    onChange={field.onChange}
-                                                    error={errors.firmaAlmacenista?.message}
-                                                />
-                                            )}
-                                        />
-                                    </div>
-                                    <div>
-                                        <Controller
-                                            name="firmaQuienRecibe"
-                                            control={control}
-                                            render={({ field }) => (
-                                                <SignaturePad
-                                                    label="Firma quien recibe"
-                                                    onChange={field.onChange}
-                                                    error={errors.firmaQuienRecibe?.message}
-                                                />
-                                            )}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
+                            </section>
+                        )}
 
                         <div className="flex justify-end pt-4">
                             <Button

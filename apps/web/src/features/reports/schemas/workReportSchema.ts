@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const activityDetailSchema = z.object({
+  templateId: z.string(),
+  realizado: z.boolean(),
+  observaciones: z.string().optional(),
+  evidencias: z.array(z.any()).optional(),
+});
+
 export const workReportSchema = z
   .object({
     subsistema: z.string().min(1, "El subsistema es obligatorio"),
@@ -9,14 +16,18 @@ export const workReportSchema = z
       .min(1, "La fecha y hora de inicio son obligatorias"),
     turno: z.string(),
     frecuencia: z.string().min(1, "La frecuencia es obligatoria"),
-    tipoMantenimiento: z.string().min(1, "El tipo de mantenimiento es obligatorio"),
+    
     trabajadores: z
       .array(z.string())
       .min(1, "Debe seleccionar al menos un trabajador"),
 
-    inspeccionRealizada: z.boolean(),
+    // New per-activity structure
+    actividadesRealizadas: z.array(activityDetailSchema).optional(),
+
+    // Global fields removed or optional
+    inspeccionRealizada: z.boolean().optional(),
     observacionesActividad: z.string().optional(),
-    evidencias: z.array(z.any()).optional(), // Using any for File objects for now
+    evidencias: z.array(z.any()).optional(),
 
     herramientas: z.array(z.string()).optional(),
     refacciones: z.array(z.string()).optional(),
@@ -34,22 +45,8 @@ export const workReportSchema = z
     fechaHoraTermino: z
       .string()
       .min(1, "La fecha y hora de término son obligatorias"),
-  })
-  .refine(
-    (data) => {
-      if (
-        data.inspeccionRealizada &&
-        (!data.observacionesActividad ||
-          data.observacionesActividad.length === 0)
-      ) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Las observaciones son obligatorias si se realizó inspección",
-      path: ["observacionesActividad"],
-    },
-  );
+    
+    templateIds: z.array(z.string()).optional(),
+  });
 
 export type WorkReportFormValues = z.infer<typeof workReportSchema>;

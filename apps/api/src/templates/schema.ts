@@ -22,6 +22,7 @@ export const TemplateSchema = z.object({
   subsistema: z.string().min(1),
   tipoMantenimiento: z.string().min(1),
   frecuencia: z.string().min(1),
+  frecuenciaCodigo: z.string().min(1),
   
   nombreCorto: z.string().min(1),
   descripcion: z.string().optional(),

@@ -8,6 +8,8 @@ const filePath = path.resolve(__dirname, "..", "..", "data", "PROGRAMA_DE_MANTEN
 
 // Sheet name normalization map
 const SHEET_NORMALIZATION: Record<string, string> = {
+  "MANTENIMIENTO DIARIO": "DIARIO",
+  "MANTENIMIENTO SEMANAL": "SEMANAL",
   "MANTENIMIENTO 1 MES": "1MES",
   "MANTENIMIENTO 3 MESES": "3MES",
   "MANTENIMIENTO 6 MESES": "6MES",
@@ -30,6 +32,11 @@ async function main() {
     const collection = await getTemplateCollection();
     console.log("Connected.");
 
+    // Clear existing templates
+    console.log("Clearing existing templates...");
+    await collection.deleteMany({});
+    console.log("Templates cleared.");
+
     console.log(`Reading Excel file from: ${filePath}`);
     const workbook = XLSX.readFile(filePath);
 
@@ -48,10 +55,6 @@ async function main() {
       console.log(`Processing sheet: ${sheetName} -> ${normalizedType}`);
 
       // Read sheet with header: "A" to get raw columns A, B, C, D...
-      // range: 1 skips the first row (header) if needed, but user said Col A is Subsistema.
-      // Assuming row 1 might be header, let's start from row 2 (index 1) or check content.
-      // User didn't specify header row index, but usually row 1 is headers.
-      // Let's assume data starts at row 2.
       const rows: any[] = XLSX.utils.sheet_to_json(sheet, { header: "A", range: 1 });
 
       let currentSubsistema = "";
@@ -80,16 +83,40 @@ async function main() {
 
         // Skip if we haven't found a subsistema yet
         if (!currentSubsistema) {
-          console.warn("Skipping row with no subsistema context:", JSON.stringify(row));
+          // console.warn("Skipping row with no subsistema context:", JSON.stringify(row));
           skipped++;
           continue;
         }
+
+        // Map frequency code to label
+        const FREQUENCY_MAP: Record<string, string> = {
+          "1D": "Diario",
+          "1M": "Mensual",
+          "3M": "Trimestral",
+          "6M": "Semestral",
+          "1Y": "Anual",
+          ">1Y": "Mayor a un año",
+          "1W": "Semanal"
+        };
+        
+        // Infer frequency from sheet type if column D is empty or not standard
+        let rawFrecuencia = row["D"] ? String(row["D"]).trim() : "";
+        
+        // If raw frequency is empty or not in map, try to infer from sheet type
+        if (!rawFrecuencia || !FREQUENCY_MAP[rawFrecuencia]) {
+            if (normalizedType === "DIARIO") rawFrecuencia = "1D";
+            else if (normalizedType === "SEMANAL") rawFrecuencia = "1W"; 
+        }
+
+        const frecuenciaCodigo = rawFrecuencia;
+        const frecuenciaLabel = FREQUENCY_MAP[rawFrecuencia] || rawFrecuencia || "N/A";
 
         const template: Template = {
           tipoReporte: "work",
           subsistema: currentSubsistema,
           tipoMantenimiento: normalizedType,
-          frecuencia: frecuencia ? String(frecuencia).trim() : "N/A", // Use column D or fallback
+          frecuencia: frecuenciaLabel,
+          frecuenciaCodigo: frecuenciaCodigo,
           nombreCorto: String(activity).trim(),
           descripcion: String(activity).trim(),
           codigoMantenimiento: undefined, // Explicitly undefined as requested
@@ -100,41 +127,11 @@ async function main() {
         };
 
         // Upsert logic
-        const filter = {
-          tipoReporte: template.tipoReporte,
-          subsistema: template.subsistema,
-          tipoMantenimiento: template.tipoMantenimiento,
-          nombreCorto: template.nombreCorto, // Include name/activity in uniqueness to allow multiple tasks per subsystem/type
-          // Wait, user said uniqueness based on: tipoReporte, subsistema, tipoMantenimiento, frecuencia.
-          // But if there are multiple activities for the same subsystem/type/frequency, they would overwrite each other!
-          // Usually "Templates" in this context might mean "Tasks" or "Checklist Items"?
-          // OR does one Template contain ALL activities?
-          // The current model is 1 Template = 1 Report Type.
-          // If the Excel lists *tasks* (activities), and we create a *Template* for each row...
-          // Then we will have hundreds of templates.
-          // Is that the intention?
-          // "The importer will populate the templates collection... using the new template model"
-          // "nombreCorto = column C" (Activity)
-          // So yes, 1 Row = 1 Template.
-          // So uniqueness MUST include the activity name (nombreCorto) or we overwrite.
-          // User previously said uniqueness: "tipoReporte, subsistema, tipoMantenimiento, frecuencia".
-          // But if I have 2 activities: "Check Oil" and "Check Filter" for same subsystem/type/freq,
-          // using only those 4 fields would merge them.
-          // I will add `nombreCorto` to the filter to ensure uniqueness per activity.
-        };
-        
-        // Re-reading user request: "Use a uniqueness key based on: tipoReporte, subsistema, tipoMantenimiento, frecuencia"
-        // If I strictly follow this, I will only have 1 template per subsystem/type/freq.
-        // But the Excel has many rows (activities).
-        // If the intention is to create a template *per activity* (which seems to be the case since nombreCorto = activity),
-        // then I MUST include nombreCorto in the filter.
-        // I will assume uniqueness includes nombreCorto.
-        
         const uniqueFilter = {
             tipoReporte: template.tipoReporte,
             subsistema: template.subsistema,
             tipoMantenimiento: template.tipoMantenimiento,
-            frecuencia: template.frecuencia,
+            frecuenciaCodigo: template.frecuenciaCodigo,
             nombreCorto: template.nombreCorto
         };
 

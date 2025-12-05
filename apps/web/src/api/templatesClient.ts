@@ -1,73 +1,43 @@
 import { API_URL } from "@/config/env";
+import { Template, TemplateFilters } from "@/types/template";
 
-export interface TemplateSectionConfig {
-  enabled: boolean;
-  label?: string;
-  required?: boolean;
-}
+export type TemplateFiltersResponse = {
+  subsistemas: string[];
+  frecuencias: { code: string; label: string }[];
+};
 
-export interface Template {
-  _id: string;
-  codigoMantenimiento?: string | null;
-  
+export async function fetchTemplateFilters(params: {
   tipoReporte: 'work' | 'warehouse';
-  subsistema: string;
-  tipoMantenimiento: string;
-  frecuencia: string;
-
-  nombreCorto: string;
-  descripcion?: string;
-
-  secciones: Record<string, TemplateSectionConfig>;
-  activo: boolean;
-}
-
-export interface TemplateFilters {
-  tipo?: 'work' | 'warehouse';
-  tipoReporte?: 'work' | 'warehouse';
   subsistema?: string;
-  tipoMantenimiento?: string;
-  frecuencia?: string;
-  codigo?: string;
-  activo?: boolean | 'all';
+}): Promise<TemplateFiltersResponse> {
+  const query = new URLSearchParams();
+  query.append('tipoReporte', params.tipoReporte);
+  if (params.subsistema) query.append('subsistema', params.subsistema);
+
+  const response = await fetch(`${API_URL}/api/templates/filters?${query.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch template filters');
+  }
+  return response.json();
 }
 
-export async function getTemplates(filters: TemplateFilters = {}): Promise<Template[]> {
+export async function fetchTemplates(filters: TemplateFilters & { frecuenciaCodigo?: string } = {}): Promise<Template[]> {
   const params = new URLSearchParams();
-  if (filters.tipo) params.append('tipo', filters.tipo);
   if (filters.tipoReporte) params.append('tipoReporte', filters.tipoReporte);
   if (filters.subsistema) params.append('subsistema', filters.subsistema);
   if (filters.tipoMantenimiento) params.append('tipoMantenimiento', filters.tipoMantenimiento);
   if (filters.frecuencia) params.append('frecuencia', filters.frecuencia);
-  if (filters.codigo) params.append('codigo', filters.codigo);
-  if (filters.activo !== undefined) params.append('activo', String(filters.activo));
+  if (filters.frecuenciaCodigo) params.append('frecuenciaCodigo', filters.frecuenciaCodigo);
 
-  const response = await fetch(`${API_URL}/templates?${params.toString()}`);
+  const response = await fetch(`${API_URL}/api/templates?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to fetch templates');
   }
   return response.json();
 }
 
-export async function fetchTemplatesByParams(params: {
-  tipoReporte: "work" | "warehouse";
-  subsistema?: string;
-  tipoMantenimiento?: string;
-  frecuencia?: string;
-}) {
-  const query = new URLSearchParams();
-  query.set("tipoReporte", params.tipoReporte);
-  if (params.subsistema) query.set("subsistema", params.subsistema);
-  if (params.tipoMantenimiento) query.set("tipoMantenimiento", params.tipoMantenimiento);
-  if (params.frecuencia) query.set("frecuencia", params.frecuencia);
-
-  const res = await fetch(`${API_URL}/templates?${query.toString()}`);
-  if (!res.ok) throw new Error("Failed to fetch templates");
-  return res.json();
-}
-
-export async function getTemplateById(id: string): Promise<Template> {
-  const response = await fetch(`${API_URL}/templates/${id}`);
+export async function fetchTemplateById(id: string): Promise<Template> {
+  const response = await fetch(`${API_URL}/api/templates/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch template');
   }

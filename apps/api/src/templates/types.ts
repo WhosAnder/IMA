@@ -1,14 +1,14 @@
-import { ObjectId } from 'mongodb';
+import { ObjectId } from "mongodb";
 
-export type ReportType = 'work' | 'warehouse';
+export type ReportType = "work" | "warehouse";
 
-export type TemplateSectionKey = 
-  | 'actividad'
-  | 'herramientas'
-  | 'refacciones'
-  | 'observacionesGenerales'
-  | 'fechas'
-  | 'firmas';
+export type TemplateSectionKey =
+  | "actividad"
+  | "herramientas"
+  | "refacciones"
+  | "observacionesGenerales"
+  | "fechas"
+  | "firmas";
 
 export interface TemplateSectionConfig {
   enabled: boolean;
@@ -19,11 +19,12 @@ export interface TemplateSectionConfig {
 export interface Template {
   _id?: ObjectId;
   codigoMantenimiento?: string | null; // Optional internal reference
-  
+
   tipoReporte: ReportType;
   subsistema: string;
   tipoMantenimiento: string;
   frecuencia: string;
+  frecuenciaCodigo: string;
 
   nombreCorto: string;
   descripcion?: string;
