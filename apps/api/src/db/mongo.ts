@@ -1,6 +1,6 @@
 import { MongoClient, Collection } from 'mongodb';
 import dotenv from 'dotenv';
-import { Template } from '../templates/types';
+import { Template } from '../modules/templates/templates.types';
 
 dotenv.config();
 
@@ -24,7 +24,12 @@ export async function getTemplateCollection(): Promise<Collection<Template>> {
   return db.collection<Template>('templates');
 }
 
-import { WorkReport, WarehouseReport } from '../reports/types';
+import { WorkReport } from '../modules/workReports/workReports.types';
+import { WarehouseReport } from '../modules/warehouseReports/warehouseReports.types';
+import {
+  WarehouseStockAdjustment,
+  WarehouseStockItem,
+} from '../modules/warehouse/warehouse.types';
 
 export async function getWorkReportCollection(): Promise<Collection<WorkReport>> {
   const client = await getClient();
@@ -36,4 +41,16 @@ export async function getWarehouseReportCollection(): Promise<Collection<Warehou
   const client = await getClient();
   const db = client.db(dbName);
   return db.collection<WarehouseReport>('warehouse_reports');
+}
+
+export async function getWarehouseStockCollection(): Promise<Collection<WarehouseStockItem>> {
+  const client = await getClient();
+  const db = client.db(dbName);
+  return db.collection<WarehouseStockItem>('warehouse_stock');
+}
+
+export async function getWarehouseAdjustmentsCollection(): Promise<Collection<WarehouseStockAdjustment>> {
+  const client = await getClient();
+  const db = client.db(dbName);
+  return db.collection<WarehouseStockAdjustment>('warehouse_stock_adjustments');
 }

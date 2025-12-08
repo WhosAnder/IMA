@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { cors } from 'hono/cors';
-import { reportsRoute } from './routes/reports';
-import { warehouseReportsRouter } from './routes/warehouseReports';
-import { templatesRoute } from './routes/templates';
+import { workReportsRoute } from './modules/workReports/workReports.route';
+import { warehouseReportsRoute } from './modules/warehouseReports/warehouseReports.route';
+import { templatesRoute } from './modules/templates/templates.route';
+import { warehouseRoute } from './modules/warehouse/warehouse.route';
 
 import { logger } from 'hono/logger';
 
@@ -33,8 +34,9 @@ const api = new Hono();
 api.get('/ping', (c) => c.json({ message: 'pong' }));
 
 // Mount report routes
-api.route('/reports', reportsRoute);
-api.route('/warehouse-reports', warehouseReportsRouter);
+api.route('/reports', workReportsRoute);
+api.route('/warehouse-reports', warehouseReportsRoute);
+api.route('/warehouse', warehouseRoute);
 api.route('/templates', templatesRoute);
 
 // Mount API routes under /api prefix
