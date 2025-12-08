@@ -51,6 +51,10 @@ export type NewWarehouseReport = Omit<
   '_id' | 'folio' | 'createdAt' | 'updatedAt'
 >;
 
+export type UpdateWarehouseReportInput = Partial<
+  Omit<WarehouseReport, '_id' | 'folio' | 'createdAt'>
+>;
+
 export async function insertWarehouseReport(
   data: NewWarehouseReport
 ): Promise<WarehouseReport> {
@@ -58,14 +62,35 @@ export async function insertWarehouseReport(
 
   const folio = await generateFolio();
   const now = new Date();
+  const { stockAdjustments: _ignoredStockAdjustments, ...reportData } = data;
 
   const newReport: WarehouseReport = {
-    ...data,
+    ...reportData,
     folio,
+    returnProcessedItemIds: data.returnProcessedItemIds ?? [],
     createdAt: now,
     updatedAt: now,
   };
 
   const result = await collection.insertOne(newReport);
   return { ...newReport, _id: result.insertedId };
+}
+
+export async function updateWarehouseReportById(
+  id: string,
+  updates: UpdateWarehouseReportInput
+): Promise<WarehouseReport | null> {
+  const collection = await getWarehouseReportCollection();
+  const result = await collection.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        ...updates,
+        updatedAt: new Date(),
+      },
+    },
+    { returnDocument: 'after' }
+  );
+
+  return result.value;
 }

@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 
 export interface WarehouseItem {
   id: string;
+  sku?: string;
   name: string;
   units: number;
   observations: string;
@@ -16,7 +17,7 @@ export interface WarehouseReport {
   folio: string;
   subsistema: string;
   fechaHoraEntrega: string;
-  fechaHoraRecepcion: string;
+  fechaHoraRecepcion?: string;
   turno: string;
   tipoMantenimiento: string;
   frecuencia: string;
@@ -31,6 +32,20 @@ export interface WarehouseReport {
   firmaQuienRecibe?: string;
   firmaAlmacenista?: string;
   firmaQuienEntrega?: string;
+  deliveryAdjustedAt?: Date;
+  returnProcessedItemIds?: string[];
+  returnAdjustedAt?: Date;
+  stockAdjustments?: StockAdjustmentSummary;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface StockAdjustmentSummary {
+  processed: number;
+  failed: Array<{ sku: string; reason: string }>;
+  warnings: string[];
+}
+
+export type WarehouseReportWithAdjustments = WarehouseReport & {
+  stockAdjustments?: StockAdjustmentSummary;
+};

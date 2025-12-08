@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const WarehouseItemSchema = z.object({
   id: z.string(),
+  sku: z.string().optional(),
   name: z.string(),
   units: z.number(),
   observations: z.string().optional(),

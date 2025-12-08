@@ -425,7 +425,10 @@ Create a new work report.
 
 Base path: `/api/warehouse-reports`
 
-Warehouse reports document tool and part deliveries and returns.
+Warehouse reports document tool and part deliveries/returns and now integrate
+with the warehouse stock module. Each item can reference a stock SKU, and the
+API automatically generates stock adjustments for deliveries and returns while
+returning a summary in the response.
 
 ### `GET /api/warehouse-reports`
 
@@ -456,6 +459,7 @@ List all warehouse reports with optional filters.
     "herramientas": [
       {
         "id": "tool-001",
+        "sku": "HR-001",
         "name": "Multimeter",
         "units": 1,
         "observations": "In good condition",
@@ -470,6 +474,7 @@ List all warehouse reports with optional filters.
     "refacciones": [
       {
         "id": "part-001",
+        "sku": "SP-001",
         "name": "Fuse 10A",
         "units": 2,
         "observations": "",
@@ -514,6 +519,7 @@ Get a warehouse report by ID.
   "herramientas": [
     {
       "id": "tool-001",
+      "sku": "HR-001",
       "name": "Multimeter",
       "units": 1,
       "observations": "In good condition",
@@ -528,6 +534,7 @@ Get a warehouse report by ID.
   "refacciones": [
     {
       "id": "part-001",
+      "sku": "SP-001",
       "name": "Fuse 10A",
       "units": 2,
       "observations": "",
@@ -570,6 +577,7 @@ Create a new warehouse report.
   "herramientas": [
     {
       "id": "tool-001",
+      "sku": "HR-001",
       "name": "Multimeter",
       "units": 1,
       "observations": "In good condition",
@@ -584,6 +592,7 @@ Create a new warehouse report.
   "refacciones": [
     {
       "id": "part-001",
+      "sku": "SP-001",
       "name": "Fuse 10A",
       "units": 2,
       "observations": "",
@@ -616,6 +625,7 @@ Create a new warehouse report.
   "herramientas": [
     {
       "id": "tool-001",
+      "sku": "HR-001",
       "name": "Multimeter",
       "units": 1,
       "observations": "In good condition",
@@ -630,6 +640,7 @@ Create a new warehouse report.
   "refacciones": [
     {
       "id": "part-001",
+      "sku": "SP-001",
       "name": "Fuse 10A",
       "units": 2,
       "observations": "",
@@ -640,10 +651,72 @@ Create a new warehouse report.
   "firmaQuienRecibe": "data:image/png;base64,...",
   "firmaAlmacenista": "data:image/png;base64,...",
   "firmaQuienEntrega": "data:image/png;base64,...",
+  "stockAdjustments": {
+    "processed": 1,
+    "failed": [
+      {
+        "sku": "SP-001",
+        "reason": "Stock item not found"
+      }
+    ],
+    "warnings": [
+      "Failed to adjust SKU SP-001: Stock item not found"
+    ]
+  },
   "createdAt": "2024-01-01T08:00:00.000Z",
   "updatedAt": "2024-01-01T16:00:00.000Z"
 }
 ```
+
+---
+
+### `PATCH /api/warehouse-reports/:id/return`
+
+Register the return of items listed in a warehouse report. This endpoint will
+set `fechaHoraRecepcion` (if it was not provided) and automatically increase
+stock for items that reference a SKU and have not been processed previously.
+
+**Path Parameters:**
+- `id`: MongoDB ObjectId of the warehouse report
+
+**Request Body (optional):**
+```json
+{
+  "fechaHoraRecepcion": "2024-01-02T10:00:00.000Z"
+}
+```
+If omitted, the current timestamp is used when the return is processed for the
+first time.
+
+**Response** (200 OK):
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "folio": "FA-0001",
+  "fechaHoraEntrega": "2024-01-01T08:00:00.000Z",
+  "fechaHoraRecepcion": "2024-01-02T10:00:00.000Z",
+  "herramientas": [
+    {
+      "id": "tool-001",
+      "sku": "HR-001",
+      "name": "Multimeter",
+      "units": 1
+    }
+  ],
+  "stockAdjustments": {
+    "processed": 1,
+    "failed": [],
+    "warnings": []
+  },
+  "returnProcessedItemIds": ["tool-001"],
+  "returnAdjustedAt": "2024-01-02T10:05:00.000Z",
+  "updatedAt": "2024-01-02T10:05:00.000Z"
+}
+```
+
+**Error Responses:**
+- `404`: Report not found
+- `500`: Unable to process the return due to an internal error
 
 **Note:** The `folio` is automatically generated in the format `FA-XXXX` (e.g., `FA-0001`).
 
@@ -1086,7 +1159,7 @@ interface WarehouseReport {
   folio: string; // Auto-generated: FA-XXXX
   subsistema: string;
   fechaHoraEntrega: string; // ISO 8601
-  fechaHoraRecepcion: string; // ISO 8601
+  fechaHoraRecepcion?: string; // ISO 8601
   turno: string;
   tipoMantenimiento: string;
   frecuencia: string;
@@ -1101,12 +1174,17 @@ interface WarehouseReport {
   firmaQuienRecibe?: string;
   firmaAlmacenista?: string;
   firmaQuienEntrega?: string;
+  deliveryAdjustedAt?: Date;
+  returnProcessedItemIds?: string[];
+  returnAdjustedAt?: Date;
+  stockAdjustments?: StockAdjustmentSummary;
   createdAt: Date;
   updatedAt: Date;
 }
 
 interface WarehouseItem {
   id: string;
+  sku?: string;
   name: string;
   units: number;
   observations: string;
@@ -1114,6 +1192,12 @@ interface WarehouseItem {
     id: string;
     previewUrl: string;
   }[];
+}
+
+interface StockAdjustmentSummary {
+  processed: number;
+  failed: { sku: string; reason: string }[];
+  warnings: string[];
 }
 ```
 
@@ -1287,4 +1371,3 @@ curl "http://localhost:4000/api/templates/filters?tipoReporte=work&subsistema=El
 ## Version
 
 This documentation is for API version 1.0.0.
-
