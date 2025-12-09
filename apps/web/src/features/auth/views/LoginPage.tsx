@@ -1,19 +1,17 @@
 import React, { useState } from "react";
 import { Button } from "@/shared/ui/Button";
-import { authClient } from "@/shared/lib/auth";
-
-async function login(email: string, password: string) {
-  const response = await authClient.signIn.email({
-    email,
-    password,
-  });
-  return response.data;
-}
+import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/auth/AuthContext";
+import { login as loginApi } from "@/api/authClient";
 
 export const LoginPage: React.FC = () => {
+  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>(
     {},
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -35,18 +33,21 @@ export const LoginPage: React.FC = () => {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    const response = await login(email, password);
+    setErrors({});
 
-    console.log(response);
+    try {
+      const userData = await loginApi({ email, password });
+      login(userData);
 
-    if (!response) {
-      setErrors({ email: "Correo electrónico o contraseña incorrectos" });
+      if (userData.mustChangePassword) {
+        router.push("/change-password");
+      } else {
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      setErrors({ general: err instanceof Error ? err.message : "Error al iniciar sesión" });
       setIsLoading(false);
-      return;
     }
-
-    setIsLoading(false);
   };
 
   return (
@@ -94,20 +95,33 @@ export const LoginPage: React.FC = () => {
             >
               Contraseña
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (errors.password)
-                  setErrors({ ...errors, password: undefined });
-              }}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.password ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password)
+                    setErrors({ ...errors, password: undefined });
+                }}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 ${
+                  errors.password ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password}</p>
             )}

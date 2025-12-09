@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Button } from '@/shared/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
-import { authClient } from "@/shared/lib/auth";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/auth/AuthContext";
+import { login as loginApi } from "@/api/authClient";
 
 export const LoginPage: React.FC = () => {
     const router = useRouter();
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -31,18 +33,19 @@ export const LoginPage: React.FC = () => {
         setIsLoading(true);
         setErrors({});
 
-        await authClient.signIn.email({
-            email,
-            password,
-        }, {
-            onSuccess: () => {
+        try {
+            const userData = await loginApi({ email, password });
+            login(userData);
+            
+            if (userData.mustChangePassword) {
+                router.push("/change-password");
+            } else {
                 router.push("/dashboard");
-            },
-            onError: (ctx) => {
-                setErrors({ general: ctx.error.message });
-                setIsLoading(false);
             }
-        });
+        } catch (err) {
+            setErrors({ general: err instanceof Error ? err.message : "Error al iniciar sesión" });
+            setIsLoading(false);
+        }
     };
 
     return (

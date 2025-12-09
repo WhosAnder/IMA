@@ -9,6 +9,12 @@ export function useLogin() {
     mutationFn: login,
     onSuccess: (data) => {
       setUser(data);
+      if (data.mustChangePassword) {
+        window.location.href = "/change-password";
+      } else {
+        // Redirect based on role or default to dashboard
+        window.location.href = "/dashboard";
+      }
     },
   });
 }

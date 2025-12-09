@@ -1,11 +1,13 @@
-import { useMockCurrentUser } from "@/features/auth/hooks/useMockCurrentUser";
+import { useAuth } from "@/auth/AuthContext";
 import { AdminDashboard } from "./AdminDashboard";
 import { SupervisorDashboard } from "./SupervisorDashboard";
 import { WarehouseDashboard } from "./WarehouseDashboard";
 import { AppLayout } from "@/shared/layout/AppLayout";
 
 export function DashboardPage() {
-  const user = useMockCurrentUser();
+  const { user } = useAuth();
+
+  if (!user) return null;
 
   let content: React.ReactNode = null;
 
@@ -13,7 +15,7 @@ export function DashboardPage() {
     content = <AdminDashboard />;
   } else if (user.role === "supervisor") {
     content = <SupervisorDashboard />;
-  } else if (user.role === "almacenista") {
+  } else if (user.role === "warehouse") {
     content = <WarehouseDashboard />;
   }
 

@@ -1,11 +1,13 @@
+"use client";
+
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMockCurrentUser } from "@/features/auth/hooks/useMockCurrentUser";
+import { useAuth } from "@/auth/AuthContext";
 import { ROLE_LABELS } from "@/features/auth/types/roles";
 import { navConfig } from "@/shared/navigation/navConfig";
 import { themes } from "@/shared/theme/colors";
-import { Menu, Search, Bell, ChevronDown, LogOut } from "lucide-react";
+import { Menu, Search, Bell, ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -17,16 +19,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   title = "IMA Soluciones",
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const user = useMockCurrentUser();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
 
-  const roleNav = navConfig[user.role];
+  if (!user) return null; // Or a loading spinner
+
+  const roleNav = navConfig[user.role as keyof typeof navConfig] || navConfig.warehouse;
 
   // Determine theme color based on role
   const themeColor =
     user.role === "admin"
       ? themes.admin.primary
-      : user.role === "almacenista"
+      : user.role === "warehouse"
         ? themes.warehouse.primary
         : themes.work.primary;
 
@@ -93,11 +97,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 {user.name}
               </p>
               <p className="text-xs text-gray-500 truncate">
-                {ROLE_LABELS[user.role]}
+                {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS]}
               </p>
             </div>
           </div>
-          <button className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+          <button
+            onClick={logout}
+            className="w-full flex items-center justify-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+          >
             <LogOut className="w-4 h-4 mr-2" />
             Cerrar sesión
           </button>
@@ -129,12 +136,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 className="lg:hidden text-xs text-gray-500"
                 style={{ color: themeColor }}
               >
-                {ROLE_LABELS[user.role]}
+                {ROLE_LABELS[user.role as keyof typeof ROLE_LABELS]}
               </div>
             </div>
           </div>
 
           <div className="flex items-center space-x-4">
+            {user.role === "admin" && (
+              <Link
+                href="/admin"
+                className="hidden md:flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Panel Admin
+              </Link>
+            )}
+
             <div className="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-2 w-64">
               <Search className="w-4 h-4 text-gray-400 mr-2" />
               <input

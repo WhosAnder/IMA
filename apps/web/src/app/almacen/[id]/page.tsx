@@ -5,7 +5,7 @@ import { RequireRole } from "@/features/auth/components/RequireRole";
 
 export default function Page() {
     return (
-        <RequireRole allowedRoles={["admin", "almacenista"]}>
+        <RequireRole allowedRoles={["admin", "warehouse"]}>
             <WarehouseReportDetailPage />
         </RequireRole>
     );

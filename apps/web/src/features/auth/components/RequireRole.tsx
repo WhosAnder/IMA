@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useMockCurrentUser } from "../hooks/useMockCurrentUser";
+import { useAuth } from "@/auth/AuthContext";
 import type { UserRole } from "../types/roles";
 
 type Props = {
@@ -8,15 +8,17 @@ type Props = {
 };
 
 export function RequireRole({ allowedRoles, children }: Props) {
-  const user = useMockCurrentUser();
+  const { user } = useAuth();
 
-  if (!allowedRoles.includes(user.role)) {
+  if (!user) return null; // Not logged in
+
+  if (!allowedRoles.includes(user.role as UserRole)) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center p-6">
         <div className="bg-red-50 text-red-800 px-6 py-4 rounded-lg border border-red-200 shadow-sm">
           <h2 className="text-lg font-semibold mb-2">Acceso Restringido</h2>
           <p className="text-sm">
-            No tienes acceso a esta sección con el rol actual ({user.role}).
+            No tienes acceso a esta sección con el rol actual ({user?.role}).
           </p>
         </div>
       </div>

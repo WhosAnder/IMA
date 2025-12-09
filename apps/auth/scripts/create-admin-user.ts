@@ -2,48 +2,64 @@ import "dotenv/config";
 import { db } from "../src/db/client";
 import { users, accounts } from "../src/db/schema";
 import { nanoid } from "nanoid";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
-import { eq } from "drizzle-orm";
-
-const scryptAsync = promisify(scrypt);
-
-// Better Auth uses scrypt with these parameters: keylen=64, cost=16384, blockSize=8, parallelization=1
-async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const keylen = 64;
-  const cost = 16384;
-  const blockSize = 8;
-  const parallelization = 1;
-  
-  const buf = (await scryptAsync(password, salt, keylen, {
-    N: cost,
-    r: blockSize,
-    p: parallelization,
-  })) as Buffer;
-  
-  // Better Auth stores as: hash.salt (both hex encoded)
-  return `${buf.toString("hex")}.${salt.toString("hex")}`;
-}
+import { eq, sql } from "drizzle-orm";
+import { hashPassword } from "better-auth/crypto";
 
 async function createAdminUser() {
-  const email = "admin@ima.com";
-  const password = "adminUser123";
-  const name = "Admin User";
-  const role = "admin";
+  const email = process.env.ADMIN_EMAIL ?? "admin@ima.com";
+  const password = process.env.ADMIN_PASSWORD ?? "adminUser123";
+  const name = process.env.ADMIN_NAME ?? "Admin User";
+  const role = process.env.ADMIN_ROLE ?? "admin";
 
   try {
+    // Ensure password hash column exists for login flow
+    await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "password_hash" text;`);
+
     // Check if user already exists
     const existingUsers = await db.select().from(users).where(eq(users.email, email));
     const existingUser = existingUsers[0];
 
+    const hashedPassword = await hashPassword(password);
+
     if (existingUser) {
-      console.log(`User with email ${email} already exists.`);
+      await db
+        .update(users)
+        .set({
+          name,
+          role,
+          passwordHash: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser.id));
+
+      const existingAccounts = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.userId, existingUser.id));
+
+      if (existingAccounts.length === 0) {
+        await db.insert(accounts).values({
+          id: nanoid(),
+          userId: existingUser.id,
+          accountId: email,
+          providerId: "credential",
+          password: hashedPassword,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      } else {
+        await db
+          .update(accounts)
+          .set({
+            password: hashedPassword,
+            updatedAt: new Date(),
+          })
+          .where(eq(accounts.userId, existingUser.id));
+      }
+
+      console.log(`User with email ${email} already existed; password and role updated.`);
       process.exit(0);
     }
-
-    // Hash the password using scrypt (same as Better Auth)
-    const hashedPassword = await hashPassword(password);
 
     // Create user ID
     const userId = nanoid();
@@ -54,6 +70,7 @@ async function createAdminUser() {
       email,
       name,
       role,
+      passwordHash: hashedPassword,
       emailVerified: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -81,4 +98,3 @@ async function createAdminUser() {
 }
 
 createAdminUser();
-

@@ -9,6 +9,9 @@ export type LoginResponse = {
   id: string;
   email: string;
   role: string;
+  name: string;
+  active: boolean;
+  mustChangePassword?: boolean;
 };
 
 export type RegisterRequest = {
@@ -23,6 +26,7 @@ export async function login(payload: LoginRequest): Promise<LoginResponse> {
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include", // Required to receive and send session cookies
     body: JSON.stringify(payload),
   });
 
@@ -40,6 +44,7 @@ export async function register(payload: RegisterRequest): Promise<{ success: boo
     headers: {
       "Content-Type": "application/json",
     },
+    credentials: "include",
     body: JSON.stringify(payload),
   });
 

@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "supervisor" | "almacenista";
+export type UserRole = "admin" | "supervisor" | "warehouse";
 
 export type CurrentUser = {
   id: string;
@@ -8,7 +8,8 @@ export type CurrentUser = {
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  admin: "IMA Claude Admin",
-  supervisor: "IMA Claude Supervisor",
-  almacenista: "IMA Colad Almacén",
+  admin: "Administrador",
+  supervisor: "Supervisor",
+  warehouse: "Almacenista",
 };
+

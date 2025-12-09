@@ -5,11 +5,15 @@ export type AuthUser = {
   id: string;
   email: string;
   role: string;
+  name: string;
+  active: boolean;
+  mustChangePassword?: boolean;
 };
 
 type AuthContextValue = {
   user: AuthUser | null;
   setUser: (user: AuthUser | null) => void;
+  login: (user: AuthUser) => void;
   logout: () => void;
 };
 
@@ -41,10 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => setUser(null);
+  const login = (userData: AuthUser) => {
+    setUser(userData);
+  };
+
+  const logout = () => {
+    setUser(null);
+    window.location.href = "/login";
+  };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
