@@ -20,7 +20,7 @@ const authConfig: BetterAuthOptions = {
     plugins: [
         admin({
             defaultRole: "warehouse",
-            adminRoles: ["admin"],
+            // adminRoles: ["admin"],
         }),
     ],
     baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:5001',
