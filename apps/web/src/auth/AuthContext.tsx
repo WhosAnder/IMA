@@ -14,7 +14,7 @@ type AuthContextValue = {
   user: AuthUser | null;
   setUser: (user: AuthUser | null) => void;
   login: (user: AuthUser) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -49,8 +49,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
+    // Call BetterAuth signOut to invalidate server session
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:5001/auth"}/sign-out`,
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+    } catch (e) {
+      console.error("Error signing out", e);
+    }
     window.location.href = "/login";
   };
 
