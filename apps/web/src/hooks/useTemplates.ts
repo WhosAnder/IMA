@@ -33,10 +33,14 @@ export function useTemplateForReport(params: {
   });
 }
 
-export function useTemplateFilters(tipoReporte: 'work' | 'warehouse', subsistema?: string) {
+export function useTemplateFilters(
+  tipoReporte: 'work' | 'warehouse',
+  subsistema?: string,
+  tipoMantenimiento?: string
+) {
   return useQuery({
-    queryKey: ['templateFilters', tipoReporte, subsistema ?? 'ALL'],
-    queryFn: () => fetchTemplateFilters({ tipoReporte, subsistema }),
+    queryKey: ['templateFilters', tipoReporte, subsistema ?? 'ALL', tipoMantenimiento ?? 'ALL'],
+    queryFn: () => fetchTemplateFilters({ tipoReporte, subsistema, tipoMantenimiento }),
     enabled: !!tipoReporte,
   });
 }

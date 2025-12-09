@@ -15,7 +15,8 @@ export async function getTemplateFiltersController(c: Context) {
   try {
     const tipoReporte = c.req.query('tipoReporte') as ReportType | undefined;
     const subsistema = c.req.query('subsistema');
-    const filters = await getTemplateFilters(tipoReporte, subsistema);
+    const tipoMantenimiento = c.req.query('tipoMantenimiento');
+    const filters = await getTemplateFilters(tipoReporte, subsistema, tipoMantenimiento);
     return c.json(filters);
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
