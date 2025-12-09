@@ -2,7 +2,7 @@ import "dotenv/config";
 import path from "node:path";
 import * as XLSX from "xlsx";
 import { getTemplateCollection } from "../db/mongo";
-import type { Template } from "../templates/types";
+import type { Template } from "../modules/templates/templates.types";
 
 const filePath = path.resolve(__dirname, "..", "..", "data", "PROGRAMA_DE_MANTENIMIENTO_PREVENTIVO.xlsx");
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const warehouseItemSchema = z.object({
     id: z.string(),
+    sku: z.string().optional(),
     name: z.string().min(1, "El nombre es obligatorio"),
     units: z.number().min(1, "Debe ser al menos 1 unidad"),
     observations: z.string().default(''),
@@ -36,4 +37,3 @@ export const warehouseReportSchema = z.object({
 });
 
 export type WarehouseReportFormValues = z.infer<typeof warehouseReportSchema>;
-

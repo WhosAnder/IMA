@@ -1,5 +1,6 @@
 export interface WarehouseItem {
   id: string;
+  sku?: string;
   name: string;
   units: number;
   observations: string;
@@ -27,7 +28,7 @@ export interface WarehouseReportDetail {
   herramientas: WarehouseItem[];
   refacciones: WarehouseItem[];
   observacionesGenerales: string;
-  fechaHoraRecepcion: string;
+  fechaHoraRecepcion?: string;
   nombreQuienEntrega: string;
   nombreAlmacenistaCierre: string;
   firmaQuienRecibe?: string;

@@ -1,5 +1,6 @@
 export type WarehouseItem = {
     id: string;
+    sku?: string;
     name: string;
     units: number;
     observations: string;
@@ -22,7 +23,7 @@ export type WarehouseReport = {
 
     observacionesGenerales: string;
 
-    fechaHoraRecepcion: string;
+    fechaHoraRecepcion?: string;
     nombreQuienEntrega: string;
     nombreAlmacenistaCierre: string; // can be same as nombreAlmacenista for now
 
@@ -30,4 +31,3 @@ export type WarehouseReport = {
     firmaAlmacenista?: string;
     firmaQuienEntrega?: string;
 };
-
