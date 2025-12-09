@@ -8,6 +8,7 @@ import { ROLE_LABELS } from "@/features/auth/types/roles";
 import { navConfig } from "@/shared/navigation/navConfig";
 import { themes } from "@/shared/theme/colors";
 import { Menu, Search, Bell, ChevronDown, LogOut, ShieldCheck } from "lucide-react";
+import { ImpersonationBanner } from "@/features/admin/components/ImpersonationBanner";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,7 +36,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         : themes.work.primary;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <>
+      <ImpersonationBanner />
+      <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <aside
         className={`
@@ -182,5 +185,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <main className="flex-1 p-4 lg:p-8 overflow-auto">{children}</main>
       </div>
     </div>
+    </>
   );
 };

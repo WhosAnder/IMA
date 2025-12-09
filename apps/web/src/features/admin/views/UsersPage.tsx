@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/shared/ui/Button";
-import { Plus, Pencil, Trash2, X, Ban, CheckCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Ban, CheckCircle, UserCheck } from "lucide-react";
 import type { UserRole } from "@/features/auth/types/roles";
 import { ROLE_LABELS } from "@/features/auth/types/roles";
 import {
@@ -13,6 +13,7 @@ import {
   useSetUserRole,
   useBanUser,
   useUnbanUser,
+  useImpersonateUser,
 } from "@/hooks/useAdminUsers";
 
 // User type from BetterAuth admin plugin
@@ -34,6 +35,7 @@ export const UsersPage: React.FC = () => {
   const setRoleMutation = useSetUserRole();
   const banMutation = useBanUser();
   const unbanMutation = useUnbanUser();
+  const impersonateMutation = useImpersonateUser();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<BetterAuthUser | null>(null);
@@ -206,11 +208,21 @@ export const UsersPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleDelete(user.id)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-600 hover:text-red-900 mr-3"
                     title="Eliminar"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {user.role !== "admin" && (
+                    <button
+                      onClick={() => impersonateMutation.mutate(user.id)}
+                      className="text-purple-600 hover:text-purple-900"
+                      title="Impersonar usuario"
+                      disabled={impersonateMutation.isPending}
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

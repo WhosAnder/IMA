@@ -159,3 +159,34 @@ export function useDeleteUser() {
   });
 }
 
+export function useImpersonateUser() {
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await authClient.admin.impersonateUser({ userId });
+      if (response.error) {
+        throw new Error(response.error.message || "Error impersonating user");
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      // Reload the page to reflect new session
+      window.location.href = "/dashboard";
+    },
+  });
+}
+
+export function useStopImpersonating() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await authClient.admin.stopImpersonating();
+      if (response.error) {
+        throw new Error(response.error.message || "Error stopping impersonation");
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      // Reload the page to return to admin session
+      window.location.href = "/admin/users";
+    },
+  });
+}
