@@ -3,16 +3,19 @@ import { Template, TemplateFilters } from "@/types/template";
 
 export type TemplateFiltersResponse = {
   subsistemas: string[];
+  tiposMantenimiento: string[];
   frecuencias: { code: string; label: string }[];
 };
 
 export async function fetchTemplateFilters(params: {
   tipoReporte: 'work' | 'warehouse';
   subsistema?: string;
+  tipoMantenimiento?: string;
 }): Promise<TemplateFiltersResponse> {
   const query = new URLSearchParams();
   query.append('tipoReporte', params.tipoReporte);
   if (params.subsistema) query.append('subsistema', params.subsistema);
+  if (params.tipoMantenimiento) query.append('tipoMantenimiento', params.tipoMantenimiento);
 
   const response = await fetch(`${API_URL}/api/templates/filters?${query.toString()}`);
   if (!response.ok) {
