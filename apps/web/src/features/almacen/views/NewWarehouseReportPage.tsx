@@ -1,32 +1,43 @@
-import React, { useEffect } from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTemplateForReport } from '@/hooks/useTemplates';
 import { useCreateWarehouseReportMutation } from '@/hooks/useWarehouseReports';
-import { useForm, useFieldArray, Controller, useWatch } from 'react-hook-form';
+import { useWarehouseItems } from '@/hooks/useWarehouse';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
 import { ImageUpload } from '@/shared/ui/ImageUpload';
 import { WarehouseReportPreview } from '../components/WarehouseReportPreview';
 import { warehouseReportSchema, WarehouseReportFormValues } from '../schemas/warehouseReportSchema';
-import { themes } from '@/shared/theme/colors';
-import { Save, Plus, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, Package, Wrench } from 'lucide-react';
+import { AppLayout } from '@/shared/layout/AppLayout';
 
-// Mock Subsystems (reused from Work Report logic or defined anew)
-const mockSubsystems = [
-    { value: 'EQUIPO DE GUIA/ TRABAJO DE GUIA', label: 'Equipo de guia/ trabajo de guia' },
-    { value: 'VEHICULO', label: 'Vehiculo' },
-    { value: 'EQUIPO DE PROPULSION', label: 'Equipo de propulsion' },
-    { value: 'EQUIPO DE CONTROL DE TREN (ATC)', label: 'Equipo de control de tren (ATC)' },
-    { value: 'EQUIPO DE COMUNICACION', label: 'Equipo de comunicacion' },
-    { value: 'EQUIPO DE DISTRIBUCION DE POTENCIA DE BAJO VOLTAJE', label: 'Equipo de distribucion de potencia de bajo voltaje' },
-    { value: 'EQUIPO DE CONTROL CENTRAL Y SCADA', label: 'Equipo de control central y SCADA' },
-    { value: 'EQUIPO DE ESTACION', label: 'Equipo de estacion' },
-    { value: 'EQUIPO DE MANTENIMIENTO', label: 'Equipo de mantenimiento' },
+const SUBSYSTEMS = [
+    'EQUIPO DE GUIA/ TRABAJO DE GUIA',
+    'VEHICULO',
+    'EQUIPO DE PROPULSION',
+    'EQUIPO DE CONTROL DE TREN (ATC)',
+    'EQUIPO DE COMUNICACION',
+    'EQUIPO DE DISTRIBUCION DE POTENCIA DE BAJO VOLTAJE',
+    'EQUIPO DE CONTROL CENTRAL Y SCADA',
+    'EQUIPO DE ESTACION',
+    'EQUIPO DE MANTENIMIENTO',
 ];
 
 export const NewWarehouseReportPage: React.FC = () => {
-    const primaryColor = themes.warehouse.primary;
+    const router = useRouter();
+    const createMutation = useCreateWarehouseReportMutation();
+    
+    // Fetch inventory
+    const { data: inventoryItems, isLoading: loadingInventory } = useWarehouseItems({ status: 'active' });
+    const herramientasOptions = inventoryItems?.filter(i => 
+        i.category?.toLowerCase() === 'herramientas'
+    ) || [];
+    const refaccionesOptions = inventoryItems?.filter(i => 
+        i.category?.toLowerCase() === 'refacciones'
+    ) || [];
 
     const {
         register,
@@ -40,14 +51,9 @@ export const NewWarehouseReportPage: React.FC = () => {
         defaultValues: {
             subsistema: '',
             fechaHoraEntrega: new Date().toISOString().slice(0, 16),
-            fechaHoraRecepcion: new Date().toISOString().slice(0, 16),
             turno: '',
-            tipoMantenimiento: '',
-            frecuencia: 'Eventual', // Default for warehouse? Or empty.
             nombreQuienRecibe: '',
             nombreAlmacenista: '',
-            nombreQuienEntrega: '',
-            nombreAlmacenistaCierre: '',
             herramientas: [],
             refacciones: [],
             observacionesGenerales: '',
@@ -64,494 +70,276 @@ export const NewWarehouseReportPage: React.FC = () => {
         name: "refacciones"
     });
 
-    const fechaHoraEntrega = watch('fechaHoraEntrega');
-    const watchedValues = useWatch({ control });
-
     // Auto-calculate shift
+    const fechaHoraEntrega = watch('fechaHoraEntrega');
     useEffect(() => {
         if (fechaHoraEntrega) {
-            const date = new Date(fechaHoraEntrega);
-            const hour = date.getHours();
+            const hour = new Date(fechaHoraEntrega).getHours();
             let shift = 'Nocturno';
-
-            if (hour >= 6 && hour < 14) {
-                shift = 'Matutino';
-            } else if (hour >= 14 && hour < 22) {
-                shift = 'Vespertino';
-            }
-
+            if (hour >= 6 && hour < 14) shift = 'Matutino';
+            else if (hour >= 14 && hour < 22) shift = 'Vespertino';
             setValue('turno', shift);
         }
     }, [fechaHoraEntrega, setValue]);
 
-    // Auto-set start time on mount
-    useEffect(() => {
-        const currentStart = watch('fechaHoraEntrega');
-        if (!currentStart) {
-            setValue('fechaHoraEntrega', new Date().toISOString().slice(0, 16));
-        }
-    }, []);
-
-    // Template Selection
-    const subsistema = watch('subsistema');
-    const tipoMantenimiento = watch('tipoMantenimiento');
-    const frecuencia = watch('frecuencia');
-
-    const { data: template, isLoading: isLoadingTemplate } = useTemplateForReport({
-        tipoReporte: 'warehouse',
-        subsistema,
-        tipoMantenimiento,
-        frecuencia
-    });
-
-    // Mutation
-    const createReportMutation = useCreateWarehouseReportMutation();
-    const router = useRouter();
-
     const onSubmit = async (data: WarehouseReportFormValues) => {
-        // Auto-set end time (fechaHoraRecepcion)
-        const now = new Date().toISOString().slice(0, 16);
-        data.fechaHoraRecepcion = now;
-        
-        // Helper to process items with images
-        const processItems = async (items: any[]) => {
-            return Promise.all(items.map(async (item) => {
-                const evidences = await Promise.all((item.evidences || []).map(async (file: any) => {
-                    if (file instanceof File) {
-                        return new Promise<string>((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result as string);
-                            reader.readAsDataURL(file);
-                        });
-                    }
-                    return file;
-                }));
-                return { ...item, evidences };
-            }));
-        };
-
-        const herramientas = await processItems(data.herramientas);
-        const refacciones = await processItems(data.refacciones);
-        
-        // Include templateId if available
-        const payload = {
-            ...data,
-            herramientas,
-            refacciones,
-            templateId: template?._id
-        };
-
-        console.log('Warehouse Report Data:', payload);
+        data.fechaHoraRecepcion = new Date().toISOString().slice(0, 16);
         
         try {
-            const result = await createReportMutation.mutateAsync(payload);
-            alert('Reporte de almacén generado');
+            const result = await createMutation.mutateAsync(data);
+            alert('Reporte generado correctamente');
             router.push(`/almacen/${(result as any)._id}`);
         } catch (error) {
-            console.error("Error creating warehouse report:", error);
+            console.error("Error:", error);
             alert('Error al generar el reporte');
         }
     };
 
-    const showHerramientas = template?.secciones.herramientas.enabled ?? true;
-    const showRefacciones = template?.secciones.refacciones.enabled ?? true;
-    const showObservaciones = template?.secciones.observacionesGenerales.enabled ?? true;
-    const showFechas = template?.secciones.fechas.enabled ?? true;
-    const showFirmas = template?.secciones.firmas.enabled ?? true;
+    const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500";
+    const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+
+    // Watch values for preview
+    const watchedValues = watch();
 
     return (
-        <div className="max-w-[1600px] mx-auto space-y-8 pb-12 px-4 sm:px-6 lg:px-8">
-            <div>
-                <h1 className="text-2xl font-bold text-gray-900">Formato de Almacén</h1>
-                <p className="text-gray-500">Registro de entrega de herramientas y refacciones.</p>
-            </div>
-
+        <div className="max-w-[1600px] mx-auto pb-12">
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-
+                
                 {/* Left Column: Form */}
                 <div>
-                    <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-8">
-
-                        {/* 1. General Data */}
-                        <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                            <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>1</div>
-                                <h2 className="text-lg font-semibold text-gray-800">Datos generales</h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        
+                        {/* Header Section */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Subsistema</label>
-                                    <select
-                                        {...register('subsistema')}
-                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.subsistema ? 'border-red-500' : 'border-gray-300'}`}
-                                    >
+                                    <label className={labelClass}>Subsistema</label>
+                                    <select {...register('subsistema')} className={inputClass}>
                                         <option value="">Seleccionar...</option>
-                                        {mockSubsystems.map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        {SUBSYSTEMS.map(s => (
+                                            <option key={s} value={s}>{s}</option>
                                         ))}
                                     </select>
-                                    {errors.subsistema && <p className="mt-1 text-sm text-red-600">{errors.subsistema.message}</p>}
+                                    {errors.subsistema && <p className="text-red-500 text-xs mt-1">{errors.subsistema.message}</p>}
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de entrega</label>
-                                    <input
-                                        type="datetime-local"
-                                        {...register('fechaHoraEntrega')}
-                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.fechaHoraEntrega ? 'border-red-500' : 'border-gray-300'}`}
-                                    />
-                                    {errors.fechaHoraEntrega && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraEntrega.message}</p>}
+                                    <label className={labelClass}>Fecha y hora de entrega</label>
+                                    <input type="datetime-local" {...register('fechaHoraEntrega')} className={inputClass} />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-                                    <input
-                                        type="text"
-                                        {...register('turno')}
-                                        readOnly
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm bg-gray-50 text-gray-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Mantenimiento</label>
-                                    <select
-                                        {...register('tipoMantenimiento')}
-                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.tipoMantenimiento ? 'border-red-500' : 'border-gray-300'}`}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="Entrega de material">Entrega de material</option>
-                                        <option value="Devolución de material">Devolución de material</option>
-                                        <option value="Préstamo de herramienta">Préstamo de herramienta</option>
-                                    </select>
-                                    {errors.tipoMantenimiento && <p className="mt-1 text-sm text-red-600">{errors.tipoMantenimiento.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia</label>
-                                    <select
-                                        {...register('frecuencia')}
-                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.frecuencia ? 'border-red-500' : 'border-gray-300'}`}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="Eventual">Eventual</option>
-                                        <option value="Diaria">Diaria</option>
-                                        <option value="Semanal">Semanal</option>
-                                        <option value="Mensual">Mensual</option>
-                                    </select>
-                                    {errors.frecuencia && <p className="mt-1 text-sm text-red-600">{errors.frecuencia.message}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Almacenista</label>
-                                    <input
-                                        type="text"
-                                        {...register('nombreAlmacenista')}
-                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreAlmacenista ? 'border-red-500' : 'border-gray-300'}`}
-                                    />
-                                    {errors.nombreAlmacenista && <p className="mt-1 text-sm text-red-600">{errors.nombreAlmacenista.message}</p>}
-                                </div>
-
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre quien recibe</label>
-                                    <input
-                                        type="text"
-                                        {...register('nombreQuienRecibe')}
-                                        className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreQuienRecibe ? 'border-red-500' : 'border-gray-300'}`}
-                                    />
-                                    {errors.nombreQuienRecibe && <p className="mt-1 text-sm text-red-600">{errors.nombreQuienRecibe.message}</p>}
+                                    <label className={labelClass}>Turno</label>
+                                    <input type="text" {...register('turno')} readOnly className={`${inputClass} bg-gray-50`} />
                                 </div>
                             </div>
 
-                            {/* Template Status */}
-                            <div className="mt-4 pt-4 border-t border-gray-100">
-                                {isLoadingTemplate && (
-                                    <div className="flex items-center text-blue-600 text-sm">
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Buscando plantilla...
-                                    </div>
-                                )}
-                                {!isLoadingTemplate && template && (
-                                    <div className="flex items-center text-green-600 text-sm bg-green-50 p-2 rounded">
-                                        <span className="font-medium mr-2">Plantilla encontrada:</span>
-                                        {template.nombreCorto} {template.codigoMantenimiento && `(${template.codigoMantenimiento})`}
-                                    </div>
-                                )}
-                                {!isLoadingTemplate && !template && subsistema && tipoMantenimiento && (
-                                    <div className="flex items-center text-amber-600 text-sm bg-amber-50 p-2 rounded">
-                                        <AlertCircle className="w-4 h-4 mr-2" />
-                                        No se encontró plantilla específica. Se usarán las secciones por defecto.
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-
-                        {/* 2. Herramientas */}
-                        {showHerramientas && (
-                            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>2</div>
-                                        <h2 className="text-lg font-semibold text-gray-800">Herramientas</h2>
-                                    </div>
-                                    <Button type="button" variant="secondary" onClick={() => appendTool({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}>
-                                        <Plus className="w-4 h-4 mr-2" /> Agregar
-                                    </Button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label className={labelClass}>Nombre y firma de quien recibe</label>
+                                    <input type="text" {...register('nombreQuienRecibe')} className={inputClass} placeholder="Nombre completo" />
+                                    {errors.nombreQuienRecibe && <p className="text-red-500 text-xs mt-1">{errors.nombreQuienRecibe.message}</p>}
                                 </div>
+                                <div>
+                                    <label className={labelClass}>Nombre y firma de almacenista</label>
+                                    <input type="text" {...register('nombreAlmacenista')} className={inputClass} placeholder="Nombre completo" />
+                                    {errors.nombreAlmacenista && <p className="text-red-500 text-xs mt-1">{errors.nombreAlmacenista.message}</p>}
+                                </div>
+                            </div>
 
-                                <div className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                <Controller
+                                    name="firmaQuienRecibe"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <SignaturePad label="Firma quien recibe" onChange={field.onChange} />
+                                    )}
+                                />
+                                <Controller
+                                    name="firmaAlmacenista"
+                                    control={control}
+                                    render={({ field }) => (
+                                        <SignaturePad label="Firma almacenista" onChange={field.onChange} />
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Herramientas Section */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Wrench className="w-5 h-5 text-green-600" />
+                                    <h2 className="text-lg font-semibold text-gray-800">Herramientas que se entregan</h2>
+                                </div>
+                                <Button 
+                                    type="button" 
+                                    variant="secondary" 
+                                    onClick={() => appendTool({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}
+                                >
+                                    <Plus className="w-4 h-4 mr-1" /> Agregar
+                                </Button>
+                            </div>
+
+                            {toolsFields.length === 0 ? (
+                                <p className="text-gray-400 text-sm text-center py-4">No hay herramientas agregadas</p>
+                            ) : (
+                                <div className="space-y-4">
                                     {toolsFields.map((field, index) => (
-                                        <div key={field.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
-                                            <button
-                                                type="button"
-                                                onClick={() => removeTool(index)}
-                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                <div className="md:col-span-6">
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Herramienta</label>
-                                                    <input
-                                                        {...register(`herramientas.${index}.name`)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                        placeholder="Nombre de la herramienta"
-                                                    />
-                                                    {errors.herramientas?.[index]?.name && <p className="text-xs text-red-500 mt-1">{errors.herramientas[index]?.name?.message}</p>}
-                                                </div>
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Unidades</label>
-                                                    <input
-                                                        type="number"
-                                                        {...register(`herramientas.${index}.units`, { valueAsNumber: true })}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    />
-                                                    {errors.herramientas?.[index]?.units && <p className="text-xs text-red-500 mt-1">{errors.herramientas[index]?.units?.message}</p>}
-                                                </div>
-                                                <div className="md:col-span-4">
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
-                                                    <input
-                                                        {...register(`herramientas.${index}.observations`)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                        placeholder="Opcional"
-                                                    />
-                                                </div>
-                                                <div className="md:col-span-12">
-                                                    <Controller
-                                                        name={`herramientas.${index}.evidences`}
-                                                        control={control}
-                                                        render={({ field }) => (
-                                                            <ImageUpload
-                                                                label="Evidencias (máx 5)"
-                                                                onChange={field.onChange}
-                                                                maxFiles={5}
-                                                            />
-                                                        )}
-                                                    />
-                                                </div>
+                                        <div key={field.id} className="grid grid-cols-12 gap-3 items-start p-3 bg-gray-50 rounded-lg relative">
+                                            <div className="col-span-5">
+                                                <label className="text-xs text-gray-500">Herramienta</label>
+                                                <select {...register(`herramientas.${index}.name`)} className={inputClass}>
+                                                    <option value="">Seleccionar...</option>
+                                                    {herramientasOptions.map(item => (
+                                                        <option key={item._id} value={item.name}>
+                                                            {item.name} - Stock: {item.quantityOnHand}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="text-xs text-gray-500">Unidades</label>
+                                                <input 
+                                                    type="number" 
+                                                    {...register(`herramientas.${index}.units`, { valueAsNumber: true })} 
+                                                    className={inputClass}
+                                                    min={1}
+                                                />
+                                            </div>
+                                            <div className="col-span-4">
+                                                <label className="text-xs text-gray-500">Observaciones</label>
+                                                <input {...register(`herramientas.${index}.observations`)} className={inputClass} />
+                                            </div>
+                                            <div className="col-span-1 flex items-end justify-center pb-1">
+                                                <button type="button" onClick={() => removeTool(index)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="col-span-12">
+                                                <Controller
+                                                    name={`herramientas.${index}.evidences`}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <ImageUpload label="Evidencias" onChange={field.onChange} maxFiles={3} />
+                                                    )}
+                                                />
                                             </div>
                                         </div>
                                     ))}
-                                    {toolsFields.length === 0 && (
-                                        <p className="text-sm text-gray-500 text-center py-4">No hay herramientas agregadas.</p>
-                                    )}
                                 </div>
-                            </section>
-                        )}
+                            )}
+                        </div>
 
-                        {/* 3. Refacciones */}
-                        {showRefacciones && (
-                            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>3</div>
-                                        <h2 className="text-lg font-semibold text-gray-800">Refacciones</h2>
-                                    </div>
-                                    <Button type="button" variant="secondary" onClick={() => appendPart({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}>
-                                        <Plus className="w-4 h-4 mr-2" /> Agregar
-                                    </Button>
+                        {/* Refacciones Section */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Package className="w-5 h-5 text-green-600" />
+                                    <h2 className="text-lg font-semibold text-gray-800">Refacciones que se entregan</h2>
                                 </div>
+                                <Button 
+                                    type="button" 
+                                    variant="secondary" 
+                                    onClick={() => appendPart({ id: crypto.randomUUID(), name: '', units: 1, observations: '', evidences: [] })}
+                                >
+                                    <Plus className="w-4 h-4 mr-1" /> Agregar
+                                </Button>
+                            </div>
 
-                                <div className="space-y-6">
+                            {partsFields.length === 0 ? (
+                                <p className="text-gray-400 text-sm text-center py-4">No hay refacciones agregadas</p>
+                            ) : (
+                                <div className="space-y-4">
                                     {partsFields.map((field, index) => (
-                                        <div key={field.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50 relative">
-                                            <button
-                                                type="button"
-                                                onClick={() => removePart(index)}
-                                                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                <div className="md:col-span-6">
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Refacción</label>
-                                                    <input
-                                                        {...register(`refacciones.${index}.name`)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                        placeholder="Nombre de la refacción"
-                                                    />
-                                                    {errors.refacciones?.[index]?.name && <p className="text-xs text-red-500 mt-1">{errors.refacciones[index]?.name?.message}</p>}
-                                                </div>
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Unidades</label>
-                                                    <input
-                                                        type="number"
-                                                        {...register(`refacciones.${index}.units`, { valueAsNumber: true })}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                    />
-                                                    {errors.refacciones?.[index]?.units && <p className="text-xs text-red-500 mt-1">{errors.refacciones[index]?.units?.message}</p>}
-                                                </div>
-                                                <div className="md:col-span-4">
-                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Observaciones</label>
-                                                    <input
-                                                        {...register(`refacciones.${index}.observations`)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                                        placeholder="Opcional"
-                                                    />
-                                                </div>
-                                                <div className="md:col-span-12">
-                                                    <Controller
-                                                        name={`refacciones.${index}.evidences`}
-                                                        control={control}
-                                                        render={({ field }) => (
-                                                            <ImageUpload
-                                                                label="Evidencias (máx 5)"
-                                                                onChange={field.onChange}
-                                                                maxFiles={5}
-                                                            />
-                                                        )}
-                                                    />
-                                                </div>
+                                        <div key={field.id} className="grid grid-cols-12 gap-3 items-start p-3 bg-gray-50 rounded-lg relative">
+                                            <div className="col-span-5">
+                                                <label className="text-xs text-gray-500">Refacción</label>
+                                                <select {...register(`refacciones.${index}.name`)} className={inputClass}>
+                                                    <option value="">Seleccionar...</option>
+                                                    {refaccionesOptions.map(item => (
+                                                        <option key={item._id} value={item.name}>
+                                                            {item.name} - Stock: {item.quantityOnHand}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="col-span-2">
+                                                <label className="text-xs text-gray-500">Unidades</label>
+                                                <input 
+                                                    type="number" 
+                                                    {...register(`refacciones.${index}.units`, { valueAsNumber: true })} 
+                                                    className={inputClass}
+                                                    min={1}
+                                                />
+                                            </div>
+                                            <div className="col-span-4">
+                                                <label className="text-xs text-gray-500">Observaciones</label>
+                                                <input {...register(`refacciones.${index}.observations`)} className={inputClass} />
+                                            </div>
+                                            <div className="col-span-1 flex items-end justify-center pb-1">
+                                                <button type="button" onClick={() => removePart(index)} className="p-2 text-red-500 hover:bg-red-50 rounded">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="col-span-12">
+                                                <Controller
+                                                    name={`refacciones.${index}.evidences`}
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <ImageUpload label="Evidencias" onChange={field.onChange} maxFiles={3} />
+                                                    )}
+                                                />
                                             </div>
                                         </div>
                                     ))}
-                                    {partsFields.length === 0 && (
-                                        <p className="text-sm text-gray-500 text-center py-4">No hay refacciones agregadas.</p>
-                                    )}
                                 </div>
-                            </section>
-                        )}
+                            )}
+                        </div>
 
-                        {/* 4. Cierre */}
-                        {(showObservaciones || showFechas || showFirmas) && (
-                            <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-                                <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: primaryColor }}>4</div>
-                                    <h2 className="text-lg font-semibold text-gray-800">Cierre</h2>
+                        {/* Observaciones Generales */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <label className={labelClass}>Observaciones Generales</label>
+                            <textarea 
+                                {...register('observacionesGenerales')} 
+                                rows={3} 
+                                className={inputClass}
+                                placeholder="Notas adicionales..."
+                            />
+                        </div>
+
+                        {/* Footer - Cierre */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Nombre y firma de quien entrega</label>
+                                    <input type="text" {...register('nombreQuienEntrega')} className={inputClass} placeholder="Nombre completo" />
                                 </div>
-
-                                <div className="grid grid-cols-1 gap-6">
-                                    {showObservaciones && (
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones generales</label>
-                                            <textarea
-                                                {...register('observacionesGenerales')}
-                                                rows={3}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2"
-                                                placeholder="Comentarios finales..."
-                                            />
-                                        </div>
-                                    )}
-
-                                    {showFechas && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Fecha y hora de recepción</label>
-                                                <input
-                                                    type="datetime-local"
-                                                    {...register('fechaHoraRecepcion')}
-                                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.fechaHoraRecepcion ? 'border-red-500' : 'border-gray-300'}`}
-                                                />
-                                                {errors.fechaHoraRecepcion && <p className="mt-1 text-sm text-red-600">{errors.fechaHoraRecepcion.message}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre quien entrega</label>
-                                                <input
-                                                    type="text"
-                                                    {...register('nombreQuienEntrega')}
-                                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreQuienEntrega ? 'border-red-500' : 'border-gray-300'}`}
-                                                />
-                                                {errors.nombreQuienEntrega && <p className="mt-1 text-sm text-red-600">{errors.nombreQuienEntrega.message}</p>}
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Almacenista (Cierre)</label>
-                                                <input
-                                                    type="text"
-                                                    {...register('nombreAlmacenistaCierre')}
-                                                    className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 ${errors.nombreAlmacenistaCierre ? 'border-red-500' : 'border-gray-300'}`}
-                                                />
-                                                {errors.nombreAlmacenistaCierre && <p className="mt-1 text-sm text-red-600">{errors.nombreAlmacenistaCierre.message}</p>}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {showFirmas && (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div>
-                                                <Controller
-                                                    name="firmaQuienEntrega"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <SignaturePad
-                                                            label="Firma quien entrega"
-                                                            onChange={field.onChange}
-                                                            error={errors.firmaQuienEntrega?.message}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-                                            <div>
-                                                <Controller
-                                                    name="firmaAlmacenista"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <SignaturePad
-                                                            label="Firma almacenista"
-                                                            onChange={field.onChange}
-                                                            error={errors.firmaAlmacenista?.message}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-                                            <div>
-                                                <Controller
-                                                    name="firmaQuienRecibe"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <SignaturePad
-                                                            label="Firma quien recibe"
-                                                            onChange={field.onChange}
-                                                            error={errors.firmaQuienRecibe?.message}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
+                                <div className="flex items-end">
+                                    <Controller
+                                        name="firmaQuienEntrega"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <SignaturePad label="Firma quien entrega" onChange={field.onChange} />
+                                        )}
+                                    />
                                 </div>
-                            </section>
-                        )}
+                            </div>
+                        </div>
 
-                        <div className="flex justify-end pt-4">
-                            <Button
-                                type="submit"
-                                className="w-full md:w-auto px-8 py-3 text-lg"
-                                isLoading={isSubmitting}
-                                style={{ backgroundColor: primaryColor }}
-                            >
+                        {/* Submit */}
+                        <div className="flex justify-end">
+                            <Button type="submit" isLoading={isSubmitting} className="px-8 py-3">
                                 <Save className="w-5 h-5 mr-2" />
-                                Generar reporte de almacén
+                                Generar Reporte
                             </Button>
                         </div>
                     </form>
                 </div>
 
                 {/* Right Column: Preview */}
-                <div>
-                    <WarehouseReportPreview values={watchedValues} />
+                <div className="hidden lg:block">
+                    <div className="sticky top-6">
+                        <WarehouseReportPreview values={watchedValues} />
+                    </div>
                 </div>
             </div>
         </div>
